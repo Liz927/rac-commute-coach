@@ -950,6 +950,94 @@ summary:focus-visible {
   font-size: 0.82rem;
 }
 
+.inline-note {
+  display: grid;
+  gap: 9px;
+  margin-top: 12px;
+  font-family: "Aptos", "Microsoft YaHei", sans-serif;
+}
+
+.inline-note > button {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--green);
+  font-size: 0.88rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.inline-note > button.has-note {
+  border-color: #c9b56f;
+  background: var(--gold-soft);
+  color: #725118;
+}
+
+.inline-note > button span {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.68);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.inline-note-editor {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid #ded5c4;
+  border-radius: 14px;
+  background: rgba(255, 253, 247, 0.7);
+}
+
+.inline-note-editor textarea {
+  width: 100%;
+  min-height: 96px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  resize: vertical;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.inline-note-footer {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.inline-note-footer span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.inline-note-footer button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 15px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--paper);
+  color: var(--green);
+  font-weight: 750;
+  cursor: pointer;
+}
+
 .question-card {
   margin: 18px 0 28px;
   padding: 18px;
@@ -1094,6 +1182,59 @@ summary:focus-visible {
 
 .question-card .mark-area {
   margin-top: 16px;
+}
+
+.free-notes-section {
+  margin-top: 12px;
+  padding: 24px 0;
+  border-bottom: 1px solid #e5dfd3;
+}
+
+.free-notes-section details {
+  overflow: hidden;
+  border: 1px solid #d9d1c1;
+  border-radius: 17px;
+  background: #f6f1e7;
+}
+
+.free-notes-section summary {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 13px 16px;
+  cursor: pointer;
+}
+
+.free-notes-section summary span {
+  font-family: "Iowan Old Style", "Songti SC", serif;
+  font-size: 1.2rem;
+  font-weight: 750;
+}
+
+.free-notes-section summary small {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.free-notes-section .inline-note {
+  margin: 0;
+  padding: 0 14px 14px;
+}
+
+.free-notes-section .inline-note > button {
+  width: 100%;
+  border-radius: 12px;
+}
+
+.free-notes-section .inline-note-editor textarea {
+  min-height: 240px;
 }
 
 .recovery-section {

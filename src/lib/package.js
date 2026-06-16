@@ -1,16 +1,43 @@
-function formatMarks(marks, emptyText) {
+function noteText(note) {
+  return note?.trim() || ''
+}
+
+function findSectionNote(day, sectionId) {
+  return (day.sectionNotes || []).find((note) => note.sectionId === sectionId)
+}
+
+function findQuestionNote(day, questionId) {
+  return (day.questionNotes || []).find((note) => note.questionId === questionId)
+}
+
+function getMarkNote(day, mark) {
+  const inlineNote =
+    mark.targetType === 'section'
+      ? findSectionNote(day, mark.targetId)?.note
+      : findQuestionNote(day, mark.targetId)?.note
+  return noteText(mark.note) || noteText(inlineNote)
+}
+
+function formatMarks(day, marks, emptyText) {
   if (!marks.length) return emptyText
 
   return marks
     .map((mark, index) => {
-      const note = mark.note?.trim() ? `\n   我的备注：${mark.note.trim()}` : ''
-      return `${index + 1}. ${mark.targetLabel}：${mark.excerpt || '未填写摘要'}${note}`
+      const note = getMarkNote(day, mark)
+      const noteLine = note ? `\n   我的备注：${note}` : ''
+      return `${index + 1}. ${mark.targetLabel}：${mark.excerpt || '未填写摘要'}${noteLine}`
     })
     .join('\n')
 }
 
 function questionLabel(day, question) {
   return `D${day.dayNumber}-${question.label}`
+}
+
+function sectionNoteLabel(day, note) {
+  const idTail = note.sectionId?.split('-').filter(Boolean).pop()
+  const label = idTail ? idTail.toUpperCase() : note.sectionTitle || 'SECTION'
+  return `D${day.dayNumber}-${label}`
 }
 
 export function buildQuestionPackage(day) {
@@ -20,22 +47,46 @@ export function buildQuestionPackage(day) {
     .filter((question) => question.isUnsure)
     .map((question) => ({
       targetLabel: questionLabel(day, question),
+      targetType: 'question',
+      targetId: question.id,
       excerpt: question.question,
-      note: '',
+      note: findQuestionNote(day, question.id)?.note || question.note || '',
     }))
   const unsureMarks = [...markedUnsure, ...unsureQuestionMarks]
+  const importantMarks = (day.marks || []).filter((mark) => mark.markType === 'important')
   const wrongQuestions = (day.questions || []).filter(
     (question) =>
       question.userAnswer && question.correctAnswer && question.userAnswer !== question.correctAnswer,
   )
   const wrongText = wrongQuestions.length
     ? wrongQuestions
-        .map(
-          (question, index) =>
-            `${index + 1}. ${question.label}\n   我的答案：${question.userAnswer}\n   正确答案：${question.correctAnswer}\n   题目：${question.question}\n   解释：${question.explanation || '暂无解释'}`,
-        )
+        .map((question, index) => {
+          const questionNote = noteText(findQuestionNote(day, question.id)?.note || question.note)
+          const noteLine = questionNote ? `\n   我的备注：${questionNote}` : ''
+          return `${index + 1}. ${question.label}\n   题目：${question.question}\n   我的答案：${question.userAnswer}\n   正确答案：${question.correctAnswer}\n   解释：${question.explanation || '暂无解释'}${noteLine}`
+        })
         .join('\n')
     : '无'
+  const assignedMarkTypes = new Set(['question', 'unsure', 'important'])
+  const assignedTargets = new Set(
+    (day.marks || [])
+      .filter((mark) => assignedMarkTypes.has(mark.markType))
+      .map((mark) => `${mark.targetType}:${mark.targetId}`),
+  )
+  const wrongQuestionIds = new Set(wrongQuestions.map((question) => question.id))
+  const freeNoteLines = [
+    noteText(day.freeNotes),
+    noteText(day.notes),
+    ...(day.sectionNotes || [])
+      .filter((note) => noteText(note.note))
+      .filter((note) => !assignedTargets.has(`section:${note.sectionId}`))
+      .map((note) => `${sectionNoteLabel(day, note)}：${note.sectionTitle || note.sectionId}\n   我的备注：${note.note.trim()}`),
+    ...(day.questionNotes || [])
+      .filter((note) => noteText(note.note))
+      .filter((note) => !assignedTargets.has(`question:${note.questionId}`))
+      .filter((note) => !wrongQuestionIds.has(note.questionId))
+      .map((note) => `D${day.dayNumber}-${note.questionLabel || note.questionId}：${note.note.trim()}`),
+  ].filter(Boolean)
 
   return `RAC Day ${day.dayNumber} 回收问题：
 
@@ -43,17 +94,21 @@ export function buildQuestionPackage(day) {
 
 一、我标记为【想问】的内容
 
-${formatMarks(questionMarks, '无')}
+${formatMarks(day, questionMarks, '无')}
 
 二、我标记为【不确定】的内容
 
-${formatMarks(unsureMarks, '无')}
+${formatMarks(day, unsureMarks, '无')}
 
 三、我答错的题
 
 ${wrongText}
 
-四、我的自由备注
+四、我边阅读边记录的自由备注
 
-${day.notes?.trim() || '无'}`
+${freeNoteLines.length ? freeNoteLines.map((line, index) => `${index + 1}. ${line}`).join('\n') : '无'}
+
+五、我标记为【重要】的内容
+
+${formatMarks(day, importantMarks, '无')}`
 }

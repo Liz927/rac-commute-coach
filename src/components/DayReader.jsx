@@ -3,13 +3,28 @@ import { useEffect, useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { buildQuestionPackage } from '../lib/package'
-import { mergeParsedQuestions } from '../lib/day'
+import { mergeParsedQuestions, upsertSectionNote } from '../lib/day'
 import { parseMarkdown } from '../lib/markdown'
 import AudioCompanion from './AudioCompanion'
+import InlineNote from './InlineNote'
 import MarkButtons from './MarkButtons'
 import QuestionCard from './QuestionCard'
 
 function SectionContent({ section, day, onUpdate }) {
+  const sectionNote =
+    (day.sectionNotes || []).find((note) => note.sectionId === section.id)?.note || ''
+
+  function saveSectionNote(note) {
+    onUpdate({
+      ...day,
+      sectionNotes: upsertSectionNote(day.sectionNotes || [], {
+        sectionId: section.id,
+        sectionTitle: section.title,
+        note,
+      }),
+    })
+  }
+
   const body = (
     <>
       <ReactMarkdown remarkPlugins={[remarkGfm]}>{section.content}</ReactMarkdown>
@@ -20,6 +35,12 @@ function SectionContent({ section, day, onUpdate }) {
         targetLabel={`D${day.dayNumber}-${section.label}`}
         excerpt={section.title}
         onChange={(marks) => onUpdate({ ...day, marks })}
+      />
+      <InlineNote
+        buttonLabel="记一句"
+        placeholder="这里想问什么？随手记一句即可"
+        value={sectionNote}
+        onSave={saveSectionNote}
       />
     </>
   )
@@ -96,6 +117,15 @@ export default function DayReader({ day, onBack, onEdit, onUpdate }) {
     onUpdate({ ...effectiveDay, reviewDraft: packageDraft })
   }
 
+  function saveFreeNotes(note) {
+    onUpdate({ ...effectiveDay, freeNotes: note })
+  }
+
+  const freeNoteCount = (effectiveDay.freeNotes || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean).length
+
   return (
     <main className="reader-screen">
       <header className="reader-header">
@@ -126,7 +156,12 @@ export default function DayReader({ day, onBack, onEdit, onUpdate }) {
       <article className="reading-paper">
         {sections.length ? (
           sections.map((section) => (
-            <SectionContent key={section.id} section={section} day={day} onUpdate={onUpdate} />
+            <SectionContent
+              key={section.id}
+              section={section}
+              day={effectiveDay}
+              onUpdate={updateEffectiveDay}
+            />
           ))
         ) : (
           <div className="markdown-body standalone-markdown">
@@ -150,6 +185,25 @@ export default function DayReader({ day, onBack, onEdit, onUpdate }) {
             ))}
           </section>
         )}
+
+        <section className="free-notes-section">
+          <details>
+            <summary>
+              <span>我的自由备注</span>
+              <small>{freeNoteCount ? `已记录 ${freeNoteCount} 条` : '未记录'}</small>
+            </summary>
+            <InlineNote
+              buttonLabel="编辑自由备注"
+              savedLabel="有内容"
+              placeholder={`controls 和 evidence 的区别还是有点混
+De Novo 和 PMA 的边界想再问
+这段和我 BRCA CE 经历可以怎么对应`}
+              value={effectiveDay.freeNotes || ''}
+              onSave={saveFreeNotes}
+              minRows={5}
+            />
+          </details>
+        </section>
 
         <section className="recovery-section">
           <p className="eyebrow">EVENING REVIEW</p>

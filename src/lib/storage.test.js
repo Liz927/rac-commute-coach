@@ -21,6 +21,9 @@ describe('normalizeImport', () => {
       sections: [],
       marks: [],
       notes: '',
+      freeNotes: '',
+      sectionNotes: [],
+      questionNotes: [],
       completed: false,
     })
   })
@@ -33,6 +36,9 @@ describe('normalizeImport', () => {
           id: 'd2',
           dayNumber: 2,
           reviewDraft: 'RAC Day 2 回收问题草稿',
+          freeNotes: '全局自由备注',
+          sectionNotes: [{ sectionId: 's1', sectionTitle: 'S1', note: 'section note' }],
+          questionNotes: [{ questionId: 'q1', questionLabel: 'Q1', note: 'question note' }],
           audioScripts: {
             casualScript: '今天通勤先复盘 FDA device classification。',
             termsScript: 'Predicate device: 对比器械。',
@@ -43,6 +49,17 @@ describe('normalizeImport', () => {
     })
 
     expect(result.days[0].reviewDraft).toBe('RAC Day 2 回收问题草稿')
+    expect(result.days[0].freeNotes).toBe('全局自由备注')
+    expect(result.days[0].sectionNotes[0]).toMatchObject({
+      sectionId: 's1',
+      sectionTitle: 'S1',
+      note: 'section note',
+    })
+    expect(result.days[0].questionNotes[0]).toMatchObject({
+      questionId: 'q1',
+      questionLabel: 'Q1',
+      note: 'question note',
+    })
     expect(result.days[0].audioScripts).toEqual({
       casualScript: '今天通勤先复盘 FDA device classification。',
       termsScript: 'Predicate device: 对比器械。',

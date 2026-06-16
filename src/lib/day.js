@@ -16,6 +16,7 @@ export function createEmptyQuestion(index = 1) {
     userAnswer: undefined,
     isUnsure: false,
     showAnswer: false,
+    note: '',
     source: 'manual',
   }
 }
@@ -28,14 +29,75 @@ export function createEmptyDay(dayNumber = 1, now = new Date().toISOString()) {
     contentMarkdown: '',
     completed: false,
     notes: '',
+    freeNotes: '',
     reviewDraft: '',
     audioScripts: normalizeAudioScripts(),
     sections: [],
     questions: [],
     marks: [],
+    sectionNotes: [],
+    questionNotes: [],
     createdAt: now,
     updatedAt: now,
   }
+}
+
+export function upsertSectionNote(sectionNotes = [], nextNote) {
+  const now = new Date().toISOString()
+  const index = sectionNotes.findIndex((note) => note.sectionId === nextNote.sectionId)
+  if (index < 0) {
+    return [
+      ...sectionNotes,
+      {
+        id: makeId('section-note'),
+        sectionId: nextNote.sectionId,
+        sectionTitle: nextNote.sectionTitle || '',
+        note: nextNote.note || '',
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]
+  }
+
+  return sectionNotes.map((note, noteIndex) =>
+    noteIndex === index
+      ? {
+          ...note,
+          sectionTitle: nextNote.sectionTitle ?? note.sectionTitle,
+          note: nextNote.note ?? note.note,
+          updatedAt: now,
+        }
+      : note,
+  )
+}
+
+export function upsertQuestionNote(questionNotes = [], nextNote) {
+  const now = new Date().toISOString()
+  const index = questionNotes.findIndex((note) => note.questionId === nextNote.questionId)
+  if (index < 0) {
+    return [
+      ...questionNotes,
+      {
+        id: makeId('question-note'),
+        questionId: nextNote.questionId,
+        questionLabel: nextNote.questionLabel || '',
+        note: nextNote.note || '',
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]
+  }
+
+  return questionNotes.map((note, noteIndex) =>
+    noteIndex === index
+      ? {
+          ...note,
+          questionLabel: nextNote.questionLabel ?? note.questionLabel,
+          note: nextNote.note ?? note.note,
+          updatedAt: now,
+        }
+      : note,
+  )
 }
 
 export function getDayStats(day) {

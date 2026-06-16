@@ -1,4 +1,6 @@
 import { Eye, EyeOff, HelpCircle } from 'lucide-react'
+import { upsertQuestionNote } from '../lib/day'
+import InlineNote from './InlineNote'
 import MarkButtons from './MarkButtons'
 
 const OPTION_KEYS = ['A', 'B', 'C', 'D']
@@ -6,6 +8,10 @@ const OPTION_KEYS = ['A', 'B', 'C', 'D']
 export default function QuestionCard({ day, question, onUpdate }) {
   const answered = Boolean(question.userAnswer)
   const isCorrect = answered && question.userAnswer === question.correctAnswer
+  const questionNote =
+    (day.questionNotes || []).find((note) => note.questionId === question.id)?.note ||
+    question.note ||
+    ''
 
   function updateQuestion(patch) {
     onUpdate({
@@ -13,6 +19,17 @@ export default function QuestionCard({ day, question, onUpdate }) {
       questions: day.questions.map((item) =>
         item.id === question.id ? { ...item, ...patch } : item,
       ),
+    })
+  }
+
+  function saveQuestionNote(note) {
+    onUpdate({
+      ...day,
+      questionNotes: upsertQuestionNote(day.questionNotes || [], {
+        questionId: question.id,
+        questionLabel: question.label,
+        note,
+      }),
     })
   }
 
@@ -81,6 +98,12 @@ export default function QuestionCard({ day, question, onUpdate }) {
         targetLabel={`D${day.dayNumber}-${question.label}`}
         excerpt={question.question}
         onChange={(marks) => onUpdate({ ...day, marks })}
+      />
+      <InlineNote
+        buttonLabel="备注/想问一句"
+        placeholder="这题哪里不懂？比如：为什么不是 PMA？"
+        value={questionNote}
+        onSave={saveQuestionNote}
       />
     </article>
   )

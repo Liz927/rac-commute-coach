@@ -23,7 +23,32 @@ function normalizeQuestion(question, index) {
       : undefined,
     isUnsure: Boolean(question.isUnsure),
     showAnswer: Boolean(question.showAnswer),
+    note: question.note || '',
     source: question.source || 'manual',
+  }
+}
+
+function normalizeSectionNote(note, index) {
+  const now = new Date().toISOString()
+  return {
+    id: note.id || `imported-section-note-${index + 1}`,
+    sectionId: note.sectionId || '',
+    sectionTitle: note.sectionTitle || '',
+    note: note.note || '',
+    createdAt: note.createdAt || now,
+    updatedAt: note.updatedAt || note.createdAt || now,
+  }
+}
+
+function normalizeQuestionNote(note, index) {
+  const now = new Date().toISOString()
+  return {
+    id: note.id || `imported-question-note-${index + 1}`,
+    questionId: note.questionId || '',
+    questionLabel: note.questionLabel || '',
+    note: note.note || '',
+    createdAt: note.createdAt || now,
+    updatedAt: note.updatedAt || note.createdAt || now,
   }
 }
 
@@ -36,6 +61,7 @@ function normalizeDay(day, index) {
     contentMarkdown: day.contentMarkdown || '',
     completed: Boolean(day.completed),
     notes: day.notes || '',
+    freeNotes: day.freeNotes || '',
     reviewDraft: day.reviewDraft || '',
     audioScripts: normalizeAudioScripts(day.audioScripts),
     sections: Array.isArray(day.sections) ? day.sections : [],
@@ -43,6 +69,12 @@ function normalizeDay(day, index) {
       ? day.questions.map((question, questionIndex) => normalizeQuestion(question, questionIndex))
       : [],
     marks: Array.isArray(day.marks) ? day.marks : [],
+    sectionNotes: Array.isArray(day.sectionNotes)
+      ? day.sectionNotes.map(normalizeSectionNote)
+      : [],
+    questionNotes: Array.isArray(day.questionNotes)
+      ? day.questionNotes.map(normalizeQuestionNote)
+      : [],
     createdAt: day.createdAt || now,
     updatedAt: day.updatedAt || now,
   }
