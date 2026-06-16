@@ -1,0 +1,19 @@
+{
+  "name": "RAC Commute Coach",
+  "short_name": "RAC Coach",
+  "description": "RAC 通勤阅读、做题与问题回收工具",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#f4efe3",
+  "theme_color": "#f4efe3",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
