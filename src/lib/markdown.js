@@ -2,6 +2,7 @@ const HEADING_RE = /^##\s+(.+?)\s*$/
 const OPTION_RE = /^([A-D])[.、)]\s*(.+?)\s*$/
 const ANSWER_RE = /^Answer\s*:\s*([A-D])\s*$/i
 const EXPLANATION_RE = /^Explanation\s*:\s*(.*)$/i
+const DAY_TITLE_RE = /^RAC\s+Day\s+(\d+(?:\.\d+)?)\s*[｜|]\s*(.+)$/i
 
 function splitHeading(rawHeading, fallbackLabel) {
   const parts = rawHeading.split(/[｜|]/, 2).map((part) => part.trim())
@@ -10,6 +11,18 @@ function splitHeading(rawHeading, fallbackLabel) {
   }
 
   return { label: fallbackLabel, title: parts[0] }
+}
+
+export function parseDayTitle(title = '') {
+  const match = title.trim().match(DAY_TITLE_RE)
+  if (!match) {
+    return { dayNumber: undefined, topicTitle: title.trim() }
+  }
+
+  return {
+    dayNumber: Number(match[1]),
+    topicTitle: match[2].trim(),
+  }
 }
 
 function parseQuestion(section, dayId) {
@@ -64,6 +77,7 @@ export function parseMarkdown(markdown = '', dayId = 'day') {
   const lines = markdown.replace(/\r\n/g, '\n').split('\n')
   const titleLine = lines.find((line) => /^#\s+/.test(line))
   const title = titleLine ? titleLine.replace(/^#\s+/, '').trim() : ''
+  const titleMetadata = parseDayTitle(title)
   const sections = []
   let current = null
 
@@ -93,6 +107,8 @@ export function parseMarkdown(markdown = '', dayId = 'day') {
 
   return {
     title,
+    dayNumber: titleMetadata.dayNumber,
+    topicTitle: titleMetadata.topicTitle,
     sections: normalizedSections,
     questions: normalizedSections
       .map((section) => parseQuestion(section, dayId))

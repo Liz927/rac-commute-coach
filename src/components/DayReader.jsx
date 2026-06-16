@@ -1,9 +1,11 @@
 import { ArrowLeft, Check, Clipboard, Edit3 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { buildQuestionPackage } from '../lib/package'
+import { mergeParsedQuestions } from '../lib/day'
 import { parseMarkdown } from '../lib/markdown'
+import AudioCompanion from './AudioCompanion'
 import MarkButtons from './MarkButtons'
 import QuestionCard from './QuestionCard'
 
@@ -49,15 +51,49 @@ export default function DayReader({ day, onBack, onEdit, onUpdate }) {
   const [showPackage, setShowPackage] = useState(false)
   const [copied, setCopied] = useState(false)
   const parsed = useMemo(() => parseMarkdown(day.contentMarkdown, day.id), [day])
+  const questions = useMemo(
+    () => mergeParsedQuestions(day.questions || [], parsed.questions),
+    [day.questions, parsed.questions],
+  )
+  const effectiveDay = useMemo(
+    () => ({
+      ...day,
+      questions,
+    }),
+    [day, questions],
+  )
   const sections = (day.sections?.length ? day.sections : parsed.sections).filter(
     (section) => !/^Q\d+$/i.test(section.label),
   )
-  const packageText = buildQuestionPackage(day)
+  const generatedPackageText = useMemo(() => buildQuestionPackage(effectiveDay), [effectiveDay])
+  const [packageDraft, setPackageDraft] = useState(() => day.reviewDraft || generatedPackageText)
+
+  useEffect(() => {
+    setPackageDraft(day.reviewDraft || generatedPackageText)
+  }, [day.id, day.reviewDraft])
 
   async function copyPackage() {
-    await navigator.clipboard.writeText(packageText)
+    await navigator.clipboard.writeText(packageDraft)
     setCopied(true)
     window.setTimeout(() => setCopied(false), 1600)
+  }
+
+  function updateEffectiveDay(nextDay) {
+    onUpdate({ ...nextDay, questions: nextDay.questions || [] })
+  }
+
+  function openPackage() {
+    setPackageDraft(day.reviewDraft || generatedPackageText)
+    setShowPackage(true)
+  }
+
+  function regeneratePackage() {
+    if (!window.confirm('重新生成会覆盖你当前手动编辑的问题包内容，继续吗？')) return
+    setPackageDraft(generatedPackageText)
+  }
+
+  function savePackageDraft() {
+    onUpdate({ ...effectiveDay, reviewDraft: packageDraft })
   }
 
   return (
@@ -85,6 +121,8 @@ export default function DayReader({ day, onBack, onEdit, onUpdate }) {
         </button>
       </div>
 
+      <AudioCompanion audioScripts={day.audioScripts} />
+
       <article className="reading-paper">
         {sections.length ? (
           sections.map((section) => (
@@ -96,18 +134,18 @@ export default function DayReader({ day, onBack, onEdit, onUpdate }) {
           </div>
         )}
 
-        {!!day.questions.length && (
+        {!!questions.length && (
           <section className="questions-section">
             <div className="reading-heading">
               <span>QUIZ</span>
               <h2>默想题</h2>
             </div>
-            {day.questions.map((question) => (
+            {questions.map((question) => (
               <QuestionCard
                 key={question.id}
-                day={day}
+                day={effectiveDay}
                 question={question}
-                onUpdate={onUpdate}
+                onUpdate={updateEffectiveDay}
               />
             ))}
           </section>
@@ -117,7 +155,7 @@ export default function DayReader({ day, onBack, onEdit, onUpdate }) {
           <p className="eyebrow">EVENING REVIEW</p>
           <h2>把今天卡住的地方带回去</h2>
           <p>想问、不确定、答错题和自由备注，会自动整理成一段可复制文本。</p>
-          <button className="primary-button" type="button" onClick={() => setShowPackage(true)}>
+          <button className="primary-button" type="button" onClick={openPackage}>
             生成今日问题包
           </button>
         </section>
@@ -128,11 +166,23 @@ export default function DayReader({ day, onBack, onEdit, onUpdate }) {
               <h2>今日问题包</h2>
               <button type="button" onClick={() => setShowPackage(false)}>收起</button>
             </div>
-            <textarea readOnly value={packageText} aria-label="今日问题包文本" />
-            <button className="primary-button" type="button" onClick={copyPackage}>
-              {copied ? <Check size={19} /> : <Clipboard size={19} />}
-              {copied ? '已复制' : '一键复制'}
-            </button>
+            <textarea
+              value={packageDraft}
+              onChange={(event) => setPackageDraft(event.target.value)}
+              aria-label="今日问题包文本"
+            />
+            <div className="package-actions">
+              <button type="button" onClick={regeneratePackage}>
+                重新生成
+              </button>
+              <button type="button" onClick={savePackageDraft}>
+                保存为今日备注
+              </button>
+              <button className="primary-button" type="button" onClick={copyPackage}>
+                {copied ? <Check size={19} /> : <Clipboard size={19} />}
+                {copied ? '已复制' : '一键复制'}
+              </button>
+            </div>
           </section>
         )}
       </article>

@@ -9,9 +9,21 @@ function formatMarks(marks, emptyText) {
     .join('\n')
 }
 
+function questionLabel(day, question) {
+  return `D${day.dayNumber}-${question.label}`
+}
+
 export function buildQuestionPackage(day) {
   const questionMarks = (day.marks || []).filter((mark) => mark.markType === 'question')
-  const unsureMarks = (day.marks || []).filter((mark) => mark.markType === 'unsure')
+  const markedUnsure = (day.marks || []).filter((mark) => mark.markType === 'unsure')
+  const unsureQuestionMarks = (day.questions || [])
+    .filter((question) => question.isUnsure)
+    .map((question) => ({
+      targetLabel: questionLabel(day, question),
+      excerpt: question.question,
+      note: '',
+    }))
+  const unsureMarks = [...markedUnsure, ...unsureQuestionMarks]
   const wrongQuestions = (day.questions || []).filter(
     (question) =>
       question.userAnswer && question.correctAnswer && question.userAnswer !== question.correctAnswer,

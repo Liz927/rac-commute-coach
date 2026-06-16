@@ -63,7 +63,12 @@ export default function QuestionCard({ day, question, onUpdate }) {
       {question.showAnswer && (
         <div className={`answer-reveal ${isCorrect ? 'correct' : answered ? 'wrong' : ''}`}>
           <strong>正确答案：{question.correctAnswer || '未设置'}</strong>
-          {answered && <span>{isCorrect ? '回答正确' : `你的答案：${question.userAnswer}`}</span>}
+          {answered && (
+            <span>
+              你选了 {question.userAnswer}，正确答案是 {question.correctAnswer}
+              {isCorrect ? '。回答正确。' : '。'}
+            </span>
+          )}
           <p>{question.explanation || '暂无解释。'}</p>
         </div>
       )}

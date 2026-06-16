@@ -23,6 +23,14 @@ describe('buildQuestionPackage', () => {
       ],
       questions: [
         {
+          id: 'q1',
+          label: 'Q1',
+          question: 'De Novo 什么时候用？',
+          correctAnswer: 'B',
+          explanation: '用于无合法 predicate 的低中风险新器械。',
+          isUnsure: true,
+        },
+        {
           label: 'Q2',
           question: '哪条路径风险最高？',
           userAnswer: 'A',
@@ -35,6 +43,7 @@ describe('buildQuestionPackage', () => {
     expect(text).toContain('RAC Day 4 回收问题：')
     expect(text).toContain('D4-S2：核心概念')
     expect(text).toContain('D4-Q1：De Novo 的适用情形')
+    expect(text).toContain('D4-Q1：De Novo 什么时候用？')
     expect(text).toContain('我的答案：A')
     expect(text).toContain('四、我的自由备注')
     expect(text).toContain('比较 substantial equivalence 和 classification。')

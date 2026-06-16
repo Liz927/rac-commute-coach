@@ -11,6 +11,11 @@ describe('day helpers', () => {
       contentMarkdown: '',
       completed: false,
       notes: '',
+      audioScripts: {
+        casualScript: '',
+        termsScript: '',
+        examScript: '',
+      },
       sections: [],
       questions: [],
       marks: [],

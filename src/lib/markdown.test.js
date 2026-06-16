@@ -55,4 +55,39 @@ describe('parseMarkdown', () => {
       }),
     ])
   })
+
+  it('extracts decimal day number and topic title from the first heading', () => {
+    const result = parseMarkdown(
+      '# RAC Day 1.5｜FDA Pathway 词汇补丁：Class / Controls / 510(k) / De Novo / PMA',
+      'day-1-5',
+    )
+
+    expect(result.dayNumber).toBe(1.5)
+    expect(result.topicTitle).toBe('FDA Pathway 词汇补丁：Class / Controls / 510(k) / De Novo / PMA')
+  })
+
+  it('parses Q1-Q9 blocks into separate questions', () => {
+    const manyQuestions = Array.from({ length: 9 }, (_, index) => {
+      const number = index + 1
+      return `## Q${number}｜默想题
+
+题目 ${number}
+A. Alpha
+B. Beta
+C. Gamma
+D. Delta
+Answer: C
+Explanation: 解释 ${number}`
+    }).join('\n\n')
+
+    const result = parseMarkdown(`# RAC Day 9｜Quiz\n\n${manyQuestions}`, 'day-9')
+
+    expect(result.questions).toHaveLength(9)
+    expect(result.questions[8]).toMatchObject({
+      id: 'day-9-q9',
+      label: 'Q9',
+      correctAnswer: 'C',
+      explanation: '解释 9',
+    })
+  })
 })

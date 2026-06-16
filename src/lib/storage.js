@@ -1,3 +1,5 @@
+import { normalizeAudioScripts } from './audioScripts'
+
 export const STORAGE_KEY = 'rac-commute-coach-data'
 export const DATA_VERSION = 1
 
@@ -34,6 +36,8 @@ function normalizeDay(day, index) {
     contentMarkdown: day.contentMarkdown || '',
     completed: Boolean(day.completed),
     notes: day.notes || '',
+    reviewDraft: day.reviewDraft || '',
+    audioScripts: normalizeAudioScripts(day.audioScripts),
     sections: Array.isArray(day.sections) ? day.sections : [],
     questions: Array.isArray(day.questions)
       ? day.questions.map((question, questionIndex) => normalizeQuestion(question, questionIndex))
