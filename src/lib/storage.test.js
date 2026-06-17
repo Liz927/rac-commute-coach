@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeImport } from './storage'
+import { makeExportPayload, normalizeImport } from './storage'
 
 describe('normalizeImport', () => {
   it('accepts an exported payload and fills optional arrays', () => {
@@ -12,11 +12,6 @@ describe('normalizeImport', () => {
       id: 'd1',
       dayNumber: 1,
       title: 'Intro',
-      audioScripts: {
-        casualScript: '',
-        termsScript: '',
-        examScript: '',
-      },
       questions: [],
       sections: [],
       marks: [],
@@ -26,9 +21,11 @@ describe('normalizeImport', () => {
       questionNotes: [],
       completed: false,
     })
+    expect(result.days[0]).not.toHaveProperty('audioScripts')
+    expect(result.days[0]).not.toHaveProperty('audioFiles')
   })
 
-  it('keeps imported Day audio scripts', () => {
+  it('ignores legacy Day audio fields while keeping text study data', () => {
     const result = normalizeImport({
       version: 1,
       days: [
@@ -43,6 +40,16 @@ describe('normalizeImport', () => {
             casualScript: '今天通勤先复盘 FDA device classification。',
             termsScript: 'Predicate device: 对比器械。',
             examScript: 'PMA 风险最高，De Novo 处理无 predicate 的新型器械。',
+          },
+          audioFiles: {
+            casualAudio: {
+              audioFileId: 'casual-id',
+              name: 'casual.mp3',
+              type: 'audio/mpeg',
+              size: 123,
+              updatedAt: '2026-06-17T00:00:00.000Z',
+              blob: 'not allowed in JSON',
+            },
           },
         },
       ],
@@ -60,11 +67,33 @@ describe('normalizeImport', () => {
       questionLabel: 'Q1',
       note: 'question note',
     })
-    expect(result.days[0].audioScripts).toEqual({
-      casualScript: '今天通勤先复盘 FDA device classification。',
-      termsScript: 'Predicate device: 对比器械。',
-      examScript: 'PMA 风险最高，De Novo 处理无 predicate 的新型器械。',
-    })
+    expect(result.days[0]).not.toHaveProperty('audioScripts')
+    expect(result.days[0]).not.toHaveProperty('audioFiles')
+  })
+
+  it('does not export legacy Day audio metadata or large file payloads', () => {
+    const result = makeExportPayload([
+      {
+        id: 'd4',
+        dayNumber: 4,
+        audioFiles: {
+          casualAudio: {
+            audioFileId: 'casual-id',
+            name: 'casual.mp3',
+            type: 'audio/mpeg',
+            size: 123,
+            updatedAt: '2026-06-17T00:00:00.000Z',
+            blob: 'not allowed in JSON',
+            file: { tooLarge: true },
+          },
+        },
+      },
+    ])
+
+    expect(result.days[0]).not.toHaveProperty('audioFiles')
+    expect(result.days[0]).not.toHaveProperty('audioScripts')
+    expect(JSON.stringify(result)).not.toContain('not allowed in JSON')
+    expect(JSON.stringify(result)).not.toContain('casual.mp3')
   })
 
   it('rejects payloads without a days array', () => {

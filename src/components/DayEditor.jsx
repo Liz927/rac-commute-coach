@@ -1,16 +1,12 @@
 import { ArrowLeft, FileScan, Plus, Save, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { AUDIO_SCRIPT_OPTIONS, normalizeAudioScripts } from '../lib/audioScripts'
 import { createEmptyQuestion, mergeParsedQuestions } from '../lib/day'
 import { parseMarkdown } from '../lib/markdown'
 
 const OPTION_KEYS = ['A', 'B', 'C', 'D']
 
 export default function DayEditor({ initialDay, onSave, onCancel }) {
-  const [day, setDay] = useState(() => ({
-    ...structuredClone(initialDay),
-    audioScripts: normalizeAudioScripts(initialDay.audioScripts),
-  }))
+  const [day, setDay] = useState(() => structuredClone(initialDay))
   const parsed = useMemo(
     () => parseMarkdown(day.contentMarkdown, day.id),
     [day.contentMarkdown, day.id],
@@ -35,16 +31,6 @@ export default function DayEditor({ initialDay, onSave, onCancel }) {
     }))
   }
 
-  function updateAudioScript(key, value) {
-    setDay((current) => ({
-      ...current,
-      audioScripts: {
-        ...normalizeAudioScripts(current.audioScripts),
-        [key]: value,
-      },
-    }))
-  }
-
   function submit(event) {
     event.preventDefault()
     const latest = parseMarkdown(day.contentMarkdown, day.id)
@@ -53,7 +39,6 @@ export default function DayEditor({ initialDay, onSave, onCancel }) {
       ...day,
       dayNumber: latest.dayNumber ?? (Number(day.dayNumber) || 1),
       title: manualTitle || latest.topicTitle || latest.title || '未命名主题',
-      audioScripts: normalizeAudioScripts(day.audioScripts),
       sections: latest.sections,
       questions: mergeParsedQuestions(day.questions, latest.questions),
       updatedAt: new Date().toISOString(),
@@ -122,31 +107,6 @@ export default function DayEditor({ initialDay, onSave, onCancel }) {
             <FileScan size={18} /> 解析 Markdown
           </button>
         </div>
-
-        <section className="audio-script-editor">
-          <div className="section-heading">
-            <div>
-              <h2>音频陪读脚本</h2>
-              <p>本地浏览器朗读使用，不会生成音频文件或上传。</p>
-            </div>
-          </div>
-          {AUDIO_SCRIPT_OPTIONS.map((option) => (
-            <label key={option.key}>
-              {option.label}
-              <textarea
-                value={day.audioScripts?.[option.key] || ''}
-                onChange={(event) => updateAudioScript(option.key, event.target.value)}
-                placeholder={
-                  option.key === 'casualScript'
-                    ? '适合通勤闲聊复盘的自然口吻脚本...'
-                    : option.key === 'termsScript'
-                      ? '术语卡、定义、对比关系...'
-                      : '考点速记、易错点、考试触发词...'
-                }
-              />
-            </label>
-          ))}
-        </section>
 
         <label>
           自由备注

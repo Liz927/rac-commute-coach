@@ -11,17 +11,18 @@ describe('day helpers', () => {
       contentMarkdown: '',
       completed: false,
       notes: '',
-      audioScripts: {
-        casualScript: '',
-        termsScript: '',
-        examScript: '',
-      },
+      freeNotes: '',
+      reviewDraft: '',
       sections: [],
       questions: [],
       marks: [],
+      sectionNotes: [],
+      questionNotes: [],
       createdAt: '2026-06-16T00:00:00.000Z',
       updatedAt: '2026-06-16T00:00:00.000Z',
     })
+    expect(day).not.toHaveProperty('audioScripts')
+    expect(day).not.toHaveProperty('audioFiles')
   })
 
   it('calculates question and mark counts', () => {

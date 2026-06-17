@@ -5,7 +5,6 @@ import remarkGfm from 'remark-gfm'
 import { buildQuestionPackage } from '../lib/package'
 import { mergeParsedQuestions, upsertSectionNote } from '../lib/day'
 import { parseMarkdown } from '../lib/markdown'
-import AudioCompanion from './AudioCompanion'
 import InlineNote from './InlineNote'
 import MarkButtons from './MarkButtons'
 import QuestionCard from './QuestionCard'
@@ -157,8 +156,6 @@ export default function DayReader({ day, onBack, onEdit, onUpdate }) {
           <Check size={18} /> {day.completed ? '今日已完成' : '标记今日完成'}
         </button>
       </div>
-
-      <AudioCompanion audioScripts={day.audioScripts} />
 
       <article className="reading-paper">
         {sections.length ? (
