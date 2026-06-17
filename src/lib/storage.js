@@ -7,6 +7,7 @@ function normalizeQuestion(question, index) {
   return {
     id: question.id || `imported-question-${index + 1}`,
     label: question.label || `Q${index + 1}`,
+    title: question.title || '默想题',
     question: question.question || '',
     options: {
       A: question.options?.A || '',

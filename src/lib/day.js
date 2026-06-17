@@ -9,6 +9,7 @@ export function createEmptyQuestion(index = 1) {
   return {
     id: makeId('question'),
     label: `Q${index}`,
+    title: '默想题',
     question: '',
     options: { A: '', B: '', C: '', D: '' },
     correctAnswer: 'A',
@@ -136,14 +137,17 @@ export function getOverallStats(days) {
 
 export function mergeParsedQuestions(existing = [], parsed = []) {
   const existingById = new Map(existing.map((question) => [question.id, question]))
+  const existingByLabel = new Map(existing.map((question) => [question.label, question]))
   const mergedParsed = parsed.map((question) => {
-    const previous = existingById.get(question.id)
+    const previous = existingById.get(question.id) || existingByLabel.get(question.label)
     return previous
       ? {
           ...question,
           userAnswer: previous.userAnswer,
           isUnsure: previous.isUnsure,
           showAnswer: previous.showAnswer,
+          title: question.title || previous.title,
+          note: previous.note || question.note,
         }
       : question
   })

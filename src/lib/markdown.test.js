@@ -26,7 +26,7 @@ describe('parseMarkdown', () => {
     const result = parseMarkdown(markdown, 'day-4')
 
     expect(result.title).toBe('RAC Day 4｜510(k) vs De Novo vs PMA')
-    expect(result.sections).toHaveLength(3)
+    expect(result.sections).toHaveLength(2)
     expect(result.sections[0]).toMatchObject({
       id: 'day-4-s1',
       label: 'S1',
@@ -89,5 +89,103 @@ Explanation: 解释 ${number}`
       correctAnswer: 'C',
       explanation: '解释 9',
     })
+  })
+
+  it('removes parsed question blocks from reading sections so answers are not exposed', () => {
+    const result = parseMarkdown(
+      `# RAC Day 1.5｜FDA Pathway 词汇补丁
+
+## S1｜Class 和 pathway
+
+Class 不会机械决定 pathway，但会强烈影响 pathway。
+
+## Q1｜默想题
+
+Class 和 pathway 的关系，最准确的是：
+
+A. Class 会机械决定唯一 pathway
+B. Class 和 pathway 完全无关
+C. Class 反映风险和控制强度，会强烈影响 pathway，但还要看 predicate、controls、exemption 等因素
+D. Pathway 只由市场部决定
+
+Answer: C
+
+Explanation: Class 是风险和控制强度，pathway 是上市程序。两者强相关，但不是机械一一对应。
+
+## Q2｜默想题
+
+Controls 在 FDA device 分类语境里，最好理解为：
+
+A. 只等于临床试验
+B. 只等于法规条文
+C. 监管为了合理保证安全有效而设置的一整套控制要求，可能包括 QMS、labeling、测试、证据和上市后动作
+D. 只等于等效实验
+
+Answer: C
+
+Explanation: Controls 是监管控制包，不是单一实验或单一法规。实验和文件通常是证明 controls 被满足的 evidence。`,
+      'day-1-5',
+    )
+
+    expect(result.sections).toHaveLength(1)
+    expect(result.sections[0].label).toBe('S1')
+    expect(result.sections[0].content).not.toMatch(/Answer:|Explanation:|A\./)
+    expect(result.contentWithoutQuestions).not.toMatch(/Answer:|Explanation:|## Q[12]/)
+    expect(result.questions).toHaveLength(2)
+    expect(result.questions[0]).toMatchObject({
+      id: 'day-1-5-q1',
+      label: 'Q1',
+      title: '默想题',
+      correctAnswer: 'C',
+      options: {
+        A: 'Class 会机械决定唯一 pathway',
+        B: 'Class 和 pathway 完全无关',
+        C: 'Class 反映风险和控制强度，会强烈影响 pathway，但还要看 predicate、controls、exemption 等因素',
+        D: 'Pathway 只由市场部决定',
+      },
+    })
+  })
+
+  it('parses half-pipe, bare, and level-three question headings', () => {
+    const result = parseMarkdown(
+      `# RAC Day 2｜Quiz
+
+## S1｜正文
+
+正文。
+
+### Q1 | 默想题
+
+题目一
+
+A. A1
+B. B1
+C. C1
+D. D1
+
+Answer: A
+
+Explanation: 解释一
+
+## Q2
+
+题目二
+
+A. A2
+B. B2
+C. C2
+D. D2
+
+Answer: D
+
+Explanation: 解释二`,
+      'day-2',
+    )
+
+    expect(result.sections).toHaveLength(1)
+    expect(result.questions).toHaveLength(2)
+    expect(result.questions[0]).toMatchObject({ label: 'Q1', title: '默想题' })
+    expect(result.questions[1]).toMatchObject({ label: 'Q2', title: '默想题', correctAnswer: 'D' })
+    expect(result.sections[0].content).not.toContain('Q1')
   })
 })

@@ -83,11 +83,18 @@ export default function DayReader({ day, onBack, onEdit, onUpdate }) {
     }),
     [day, questions],
   )
-  const sections = (day.sections?.length ? day.sections : parsed.sections).filter(
+  const sections = (day.contentMarkdown ? parsed.sections : day.sections || []).filter(
     (section) => !/^Q\d+$/i.test(section.label),
   )
   const generatedPackageText = useMemo(() => buildQuestionPackage(effectiveDay), [effectiveDay])
   const [packageDraft, setPackageDraft] = useState(() => day.reviewDraft || generatedPackageText)
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    console.log(
+      `[RAC parser] day=${day.id} questions=${parsed.questions.length} contentHasAnswer=${/Answer\s*:|Explanation\s*:/i.test(parsed.contentWithoutQuestions)}`,
+    )
+  }, [day.id, parsed.questions.length, parsed.contentWithoutQuestions])
 
   useEffect(() => {
     setPackageDraft(day.reviewDraft || generatedPackageText)
@@ -165,7 +172,9 @@ export default function DayReader({ day, onBack, onEdit, onUpdate }) {
           ))
         ) : (
           <div className="markdown-body standalone-markdown">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{day.contentMarkdown}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {parsed.contentWithoutQuestions || day.contentMarkdown}
+            </ReactMarkdown>
           </div>
         )}
 

@@ -35,7 +35,7 @@ export default function QuestionCard({ day, question, onUpdate }) {
 
   return (
     <article className="question-card">
-      <div className="question-label">{question.label} · 默想题</div>
+      <div className="question-label">{question.label}｜{question.title || '默想题'}</div>
       <h3>{question.question || '未填写题目'}</h3>
       <div className="answer-grid">
         {OPTION_KEYS.map((key) => {
