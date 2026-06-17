@@ -29,15 +29,41 @@ export function createEmptyDay(dayNumber = 1, now = new Date().toISOString()) {
     completed: false,
     notes: '',
     freeNotes: '',
+    quickDraft: '',
     reviewDraft: '',
     sections: [],
     questions: [],
     marks: [],
     sectionNotes: [],
     questionNotes: [],
+    quickNotes: [],
     createdAt: now,
     updatedAt: now,
   }
+}
+
+export function createQuickNote(text, tag = 'general', now = new Date().toISOString()) {
+  return {
+    id: makeId('quick-note'),
+    text: text.trim(),
+    tag: ['question', 'unsure', 'important', 'general'].includes(tag) ? tag : 'general',
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
+export function upsertQuickNote(quickNotes = [], nextNote) {
+  const now = new Date().toISOString()
+  return quickNotes.map((note) =>
+    note.id === nextNote.id
+      ? {
+          ...note,
+          text: nextNote.text ?? note.text,
+          tag: nextNote.tag ?? note.tag,
+          updatedAt: now,
+        }
+      : note,
+  )
 }
 
 export function upsertSectionNote(sectionNotes = [], nextNote) {

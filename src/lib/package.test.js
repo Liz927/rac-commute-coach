@@ -54,6 +54,16 @@ describe('buildQuestionPackage', () => {
       dayNumber: 5,
       title: 'Inline notes',
       freeNotes: '全局备注：controls 还要再问。',
+      quickNotes: [
+        {
+          text: 'quick 想问：predicate 怎么选？',
+          tag: 'question',
+        },
+        {
+          text: 'quick 重要：Class III 和 PMA 对齐复盘。',
+          tag: 'important',
+        },
+      ],
       marks: [
         {
           targetType: 'section',
@@ -131,6 +141,8 @@ describe('buildQuestionPackage', () => {
     expect(text).toContain('三、我答错的题')
     expect(text).toContain('我的备注：错题备注：为什么不是 PMA？')
     expect(text).toContain('四、我边阅读边记录的自由备注')
+    expect(text).toContain('[quickNote] 【想问】 quick 想问：predicate 怎么选？')
+    expect(text).toContain('[quickNote] 【重要】 quick 重要：Class III 和 PMA 对齐复盘。')
     expect(text).toContain('全局备注：controls 还要再问。')
     expect(text).toContain('D5-S2：Section two')
     expect(text).toContain('D5-Q3：没有标记的 question note 进入自由备注。')

@@ -51,6 +51,20 @@ function normalizeQuestionNote(note, index) {
   }
 }
 
+function normalizeQuickNote(note, index) {
+  const now = new Date().toISOString()
+  const tag = ['question', 'unsure', 'important', 'general'].includes(note.tag)
+    ? note.tag
+    : 'general'
+  return {
+    id: note.id || `imported-quick-note-${index + 1}`,
+    text: note.text || '',
+    tag,
+    createdAt: note.createdAt || now,
+    updatedAt: note.updatedAt || note.createdAt || now,
+  }
+}
+
 function normalizeDay(day, index) {
   const now = new Date().toISOString()
   return {
@@ -61,6 +75,7 @@ function normalizeDay(day, index) {
     completed: Boolean(day.completed),
     notes: day.notes || '',
     freeNotes: day.freeNotes || '',
+    quickDraft: day.quickDraft || '',
     reviewDraft: day.reviewDraft || '',
     sections: Array.isArray(day.sections) ? day.sections : [],
     questions: Array.isArray(day.questions)
@@ -72,6 +87,9 @@ function normalizeDay(day, index) {
       : [],
     questionNotes: Array.isArray(day.questionNotes)
       ? day.questionNotes.map(normalizeQuestionNote)
+      : [],
+    quickNotes: Array.isArray(day.quickNotes)
+      ? day.quickNotes.map(normalizeQuickNote).filter((note) => note.text.trim())
       : [],
     createdAt: day.createdAt || now,
     updatedAt: day.updatedAt || now,

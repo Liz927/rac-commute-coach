@@ -3,11 +3,19 @@ import { useEffect, useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { buildQuestionPackage } from '../lib/package'
-import { mergeParsedQuestions, upsertSectionNote } from '../lib/day'
+import { mergeParsedQuestions, upsertQuickNote, upsertSectionNote } from '../lib/day'
 import { parseMarkdown } from '../lib/markdown'
 import InlineNote from './InlineNote'
 import MarkButtons from './MarkButtons'
 import QuestionCard from './QuestionCard'
+import QuickNoteBar from './QuickNoteBar'
+
+const QUICK_NOTE_TAGS = [
+  { value: 'general', label: '普通' },
+  { value: 'question', label: '想问' },
+  { value: 'unsure', label: '不确定' },
+  { value: 'important', label: '重要' },
+]
 
 function SectionContent({ section, day, onUpdate }) {
   const sectionNote =
@@ -64,6 +72,51 @@ function SectionContent({ section, day, onUpdate }) {
       </div>
       <div className="markdown-body">{body}</div>
     </section>
+  )
+}
+
+function QuickNotesList({ day, onUpdate }) {
+  const notes = day.quickNotes || []
+  if (!notes.length) return <p className="quick-notes-empty">还没有随手记录的问题。</p>
+
+  function updateNote(note, patch) {
+    onUpdate({
+      ...day,
+      quickNotes: upsertQuickNote(notes, { ...note, ...patch }),
+    })
+  }
+
+  function deleteNote(id) {
+    onUpdate({
+      ...day,
+      quickNotes: notes.filter((note) => note.id !== id),
+    })
+  }
+
+  return (
+    <div className="quick-notes-list">
+      {notes.map((note) => (
+        <article className="quick-note-item" key={note.id}>
+          <textarea
+            aria-label="编辑快速疑问"
+            value={note.text}
+            onChange={(event) => updateNote(note, { text: event.target.value })}
+          />
+          <div className="quick-note-item-actions">
+            <select
+              aria-label="快速疑问标签"
+              value={note.tag || 'general'}
+              onChange={(event) => updateNote(note, { tag: event.target.value })}
+            >
+              {QUICK_NOTE_TAGS.map((tag) => (
+                <option key={tag.value} value={tag.value}>{tag.label}</option>
+              ))}
+            </select>
+            <button type="button" onClick={() => deleteNote(note.id)}>删除</button>
+          </div>
+        </article>
+      ))}
+    </div>
   )
 }
 
@@ -125,6 +178,10 @@ export default function DayReader({ day, onBack, onEdit, onUpdate }) {
 
   function saveFreeNotes(note) {
     onUpdate({ ...effectiveDay, freeNotes: note })
+  }
+
+  function updateReaderDay(nextDay) {
+    onUpdate({ ...nextDay, questions: nextDay.questions || [] })
   }
 
   const freeNoteCount = (effectiveDay.freeNotes || '')
@@ -208,6 +265,13 @@ De Novo 和 PMA 的边界想再问
               onSave={saveFreeNotes}
               minRows={5}
             />
+            <div className="quick-notes-panel">
+              <div className="quick-notes-panel-head">
+                <strong>随手疑问</strong>
+                <span>{(effectiveDay.quickNotes || []).length} 条</span>
+              </div>
+              <QuickNotesList day={effectiveDay} onUpdate={updateReaderDay} />
+            </div>
           </details>
         </section>
 
@@ -246,6 +310,7 @@ De Novo 和 PMA 的边界想再问
           </section>
         )}
       </article>
+      <QuickNoteBar day={effectiveDay} onUpdate={updateReaderDay} />
     </main>
   )
 }

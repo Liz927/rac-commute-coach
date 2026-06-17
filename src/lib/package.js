@@ -40,6 +40,13 @@ function sectionNoteLabel(day, note) {
   return `D${day.dayNumber}-${label}`
 }
 
+function quickNoteTagLabel(tag) {
+  if (tag === 'question') return '【想问】 '
+  if (tag === 'unsure') return '【不确定】 '
+  if (tag === 'important') return '【重要】 '
+  return ''
+}
+
 export function buildQuestionPackage(day) {
   const questionMarks = (day.marks || []).filter((mark) => mark.markType === 'question')
   const markedUnsure = (day.marks || []).filter((mark) => mark.markType === 'unsure')
@@ -75,6 +82,9 @@ export function buildQuestionPackage(day) {
   )
   const wrongQuestionIds = new Set(wrongQuestions.map((question) => question.id))
   const freeNoteLines = [
+    ...(day.quickNotes || [])
+      .filter((note) => noteText(note.text))
+      .map((note) => `[quickNote] ${quickNoteTagLabel(note.tag)}${note.text.trim()}`),
     noteText(day.freeNotes),
     noteText(day.notes),
     ...(day.sectionNotes || [])

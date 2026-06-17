@@ -17,8 +17,10 @@ describe('normalizeImport', () => {
       marks: [],
       notes: '',
       freeNotes: '',
+      quickDraft: '',
       sectionNotes: [],
       questionNotes: [],
+      quickNotes: [],
       completed: false,
     })
     expect(result.days[0]).not.toHaveProperty('audioScripts')
@@ -34,6 +36,11 @@ describe('normalizeImport', () => {
           dayNumber: 2,
           reviewDraft: 'RAC Day 2 回收问题草稿',
           freeNotes: '全局自由备注',
+          quickDraft: '还没加入的问题草稿',
+          quickNotes: [
+            { id: 'qn1', text: 'quick note one', tag: 'question', createdAt: '2026-06-18T00:00:00.000Z' },
+            { text: 'quick note two', tag: 'bad-tag' },
+          ],
           sectionNotes: [{ sectionId: 's1', sectionTitle: 'S1', note: 'section note' }],
           questionNotes: [{ questionId: 'q1', questionLabel: 'Q1', note: 'question note' }],
           audioScripts: {
@@ -57,6 +64,20 @@ describe('normalizeImport', () => {
 
     expect(result.days[0].reviewDraft).toBe('RAC Day 2 回收问题草稿')
     expect(result.days[0].freeNotes).toBe('全局自由备注')
+    expect(result.days[0].quickDraft).toBe('还没加入的问题草稿')
+    expect(result.days[0].quickNotes).toEqual([
+      expect.objectContaining({
+        id: 'qn1',
+        text: 'quick note one',
+        tag: 'question',
+        createdAt: '2026-06-18T00:00:00.000Z',
+      }),
+      expect.objectContaining({
+        id: 'imported-quick-note-2',
+        text: 'quick note two',
+        tag: 'general',
+      }),
+    ])
     expect(result.days[0].sectionNotes[0]).toMatchObject({
       sectionId: 's1',
       sectionTitle: 'S1',
