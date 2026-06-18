@@ -143,9 +143,11 @@ export default function DayReader({ day, onBack, onEdit, onUpdate }) {
 
   useEffect(() => {
     if (!import.meta.env.DEV) return
-    console.log(
-      `[RAC parser] day=${day.id} questions=${parsed.questions.length} contentHasAnswer=${/Answer\s*:|Explanation\s*:/i.test(parsed.contentWithoutQuestions)}`,
-    )
+    console.log('[RAC parser] content length', parsed.contentWithoutQuestions.length)
+    console.log('[RAC parser] questions', parsed.questions)
+    if (/^#{2,3}\s*Q\d+/im.test(day.contentMarkdown || '') && parsed.questions.length === 0) {
+      console.warn('[RAC parser] Found Q headings but parsed 0 questions')
+    }
   }, [day.id, parsed.questions.length, parsed.contentWithoutQuestions])
 
   useEffect(() => {
@@ -163,7 +165,7 @@ export default function DayReader({ day, onBack, onEdit, onUpdate }) {
   }
 
   function openPackage() {
-    setPackageDraft(day.reviewDraft || generatedPackageText)
+    setPackageDraft(generatedPackageText)
     setShowPackage(true)
   }
 

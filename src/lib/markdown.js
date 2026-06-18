@@ -1,13 +1,19 @@
+const PIPE_RE = /[\uFF5C|]/
 const HEADING_RE = /^##\s+(.+?)\s*$/
-const ANY_HEADING_RE = /^(#{2,3})\s+(.+?)\s*$/
-const QUESTION_HEADING_RE = /^(#{2,3})\s+(Q\d+)(?:\s*[｜|]\s*(.+?))?\s*$/i
-const OPTION_RE = /^([A-D])[.、)]\s*(.+?)\s*$/
-const ANSWER_RE = /^Answer\s*:\s*([A-D])\b.*$/i
-const EXPLANATION_RE = /^Explanation\s*:\s*(.*)$/i
-const DAY_TITLE_RE = /^RAC\s+Day\s+(\d+(?:\.\d+)?)\s*[｜|]\s*(.+)$/i
+const ANY_HEADING_RE = /^#{1,3}\s+.+?\s*$/
+const SECTION_HEADING_RE = /^(#{2,3})\s+(.+?)\s*$/
+const QUESTION_HEADING_RE = /^#{2,3}\s*Q(\d+)(?:\s*[\uFF5C|]\s*(.+?))?\s*$/i
+const OPTION_RE = /^([A-D])[\.\u3001]\s*(.+?)\s*$/i
+const ANSWER_RE = /^(?:Answer|\u7B54\u6848|\u6B63\u786E\u7B54\u6848)\s*[:\uFF1A]\s*([A-D])\s*$/i
+const EXPLANATION_RE = /^(?:Explanation|\u89E3\u6790|\u89E3\u91CA)\s*[:\uFF1A]\s*(.*)$/i
+const DAY_TITLE_RE = /^RAC\s+Day\s+(\d+(?:\.\d+)?)\s*[\uFF5C|]\s*(.+)$/i
+
+function cleanLine(line = '') {
+  return line.trim().replace(/\s{2,}$/, '')
+}
 
 function splitHeading(rawHeading, fallbackLabel) {
-  const parts = rawHeading.split(/[｜|]/, 2).map((part) => part.trim())
+  const parts = rawHeading.split(PIPE_RE, 2).map((part) => part.trim())
   if (parts.length === 2) {
     return { label: parts[0], title: parts[1] }
   }
@@ -29,19 +35,25 @@ export function parseDayTitle(title = '') {
 
 function splitInlineOptions(line) {
   const trimmed = line.trim()
-  if (!OPTION_RE.test(trimmed)) return [line]
-  return trimmed
-    .split(/(?=\s+[A-D][.、)]\s+)/)
+  const optionStart = trimmed.search(/[A-D][\.\u3001]\s+/i)
+  if (optionStart < 0) return [line]
+
+  const prefix = trimmed.slice(0, optionStart).trim()
+  const optionText = trimmed.slice(optionStart)
+  const parts = optionText
+    .split(/(?=\s*[A-D][\.\u3001]\s+)/i)
     .map((part) => part.trim())
     .filter(Boolean)
+  return prefix ? [prefix, ...parts] : parts
 }
 
 function parseQuestionBlock(headingLine, contentLines, dayId) {
   const headingMatch = headingLine.match(QUESTION_HEADING_RE)
   if (!headingMatch) return null
 
-  const label = headingMatch[2].toUpperCase()
-  const title = headingMatch[3]?.trim() || '默想题'
+  const number = Number(headingMatch[1])
+  const label = `Q${number}`
+  const title = headingMatch[2]?.trim() || '\u9ED8\u60F3\u9898'
   const lines = contentLines.flatMap(splitInlineOptions)
   const optionIndex = lines.findIndex((line) => OPTION_RE.test(line.trim()))
   if (optionIndex < 0) return null
@@ -53,7 +65,7 @@ function parseQuestionBlock(headingLine, contentLines, dayId) {
   let explanationStarted = false
 
   for (const rawLine of lines.slice(optionIndex)) {
-    const line = rawLine.trim()
+    const line = cleanLine(rawLine)
     const optionMatch = line.match(OPTION_RE)
     const answerMatch = line.match(ANSWER_RE)
     const explanationMatch = line.match(EXPLANATION_RE)
@@ -80,10 +92,10 @@ function parseQuestionBlock(headingLine, contentLines, dayId) {
   if (!['A', 'B', 'C', 'D'].every((key) => options[key])) return null
 
   return {
-    id: `${dayId}-${label.toLowerCase()}`,
+    id: `${dayId}-q${number}`,
     label,
     title,
-    question: lines.slice(0, optionIndex).join('\n').trim(),
+    question: lines.slice(0, optionIndex).map(cleanLine).filter(Boolean).join('\n').trim(),
     options,
     correctAnswer,
     explanation,
@@ -112,19 +124,12 @@ export function parseMarkdownToSectionsAndQuestions(markdown = '', dayId = 'day'
       continue
     }
 
-    const level = questionHeading[1].length
     const questionLines = []
     let cursor = index + 1
 
     while (cursor < lines.length) {
       const nextLine = lines[cursor]
-      const nextQuestionHeading = nextLine.match(QUESTION_HEADING_RE)
-      const nextHeading = nextLine.match(ANY_HEADING_RE)
-      const endsCurrentQuestion =
-        Boolean(nextQuestionHeading) ||
-        (Boolean(nextHeading) && nextHeading[1].length <= level)
-
-      if (endsCurrentQuestion) break
+      if (ANY_HEADING_RE.test(nextLine)) break
       questionLines.push(nextLine)
       cursor += 1
     }
@@ -132,11 +137,8 @@ export function parseMarkdownToSectionsAndQuestions(markdown = '', dayId = 'day'
     const question = parseQuestionBlock(line, questionLines, dayId)
     if (question) {
       questions.push(question)
-      index = cursor - 1
-    } else {
-      contentLines.push(line, ...questionLines)
-      index = cursor - 1
     }
+    index = cursor - 1
   }
 
   const contentWithoutQuestions = contentLines.join('\n').trim()
@@ -154,7 +156,7 @@ export function parseMarkdownToSectionsAndQuestions(markdown = '', dayId = 'day'
         title: heading.title,
         heading: headingMatch[1].trim(),
         content: '',
-        collapsible: /术语卡/.test(headingMatch[1]),
+        collapsible: /^T\b/i.test(heading.label) || /\u672F\u8BED\u5361/.test(headingMatch[1]),
       }
     } else if (current) {
       current.content += `${line}\n`
@@ -162,10 +164,12 @@ export function parseMarkdownToSectionsAndQuestions(markdown = '', dayId = 'day'
   }
 
   if (current) sections.push(current)
-  const normalizedSections = sections.map((section) => ({
-    ...section,
-    content: section.content.trim(),
-  }))
+  const normalizedSections = sections
+    .filter((section) => !QUESTION_HEADING_RE.test(`## ${section.heading}`))
+    .map((section) => ({
+      ...section,
+      content: section.content.trim(),
+    }))
 
   return {
     title,

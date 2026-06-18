@@ -188,4 +188,70 @@ Explanation: 解释二`,
     expect(result.questions[1]).toMatchObject({ label: 'Q2', title: '默想题', correctAnswer: 'D' })
     expect(result.sections[0].content).not.toContain('Q1')
   })
+
+  it('parses real Chinese Q blocks and removes answer text from reading markdown', () => {
+    const result = parseMarkdown(
+      `# RAC Day 1.5｜FDA Pathway 词汇补丁
+
+## S1｜Class 和 pathway
+
+Class 不会机械决定 pathway，但会强烈影响 pathway。
+
+## Q1｜默想题
+
+Class 和 pathway 的关系，最准确的是：
+
+A. Class 会机械决定唯一 pathway${'  '}
+B. Class 和 pathway 完全无关${'  '}
+C. Class 反映风险和控制强度，会强烈影响 pathway，但还要看 predicate、controls、exemption 等因素${'  '}
+D. Pathway 只由市场部决定
+
+Answer: C
+
+Explanation: Class 是风险和控制强度，pathway 是上市程序。两者强相关，但不是机械一一对应。
+
+### Q2 | 默想题
+
+Controls 在 FDA device 分类语境里，最好理解为：
+
+A、只等于临床试验
+B、只等于法规条文
+C、监管为了合理保证安全有效而设置的一整套控制要求
+D、只等于等效实验
+
+正确答案：C
+
+解析：Controls 是监管控制包，不是单一实验或单一法规。
+
+## R｜晚上回收问题
+
+整理问题包。`,
+      'day-real',
+    )
+
+    expect(result.questions).toHaveLength(2)
+    expect(result.questions[0]).toMatchObject({
+      id: 'day-real-q1',
+      label: 'Q1',
+      title: '默想题',
+      question: 'Class 和 pathway 的关系，最准确的是：',
+      correctAnswer: 'C',
+      explanation: 'Class 是风险和控制强度，pathway 是上市程序。两者强相关，但不是机械一一对应。',
+      options: {
+        A: 'Class 会机械决定唯一 pathway',
+        B: 'Class 和 pathway 完全无关',
+        C: 'Class 反映风险和控制强度，会强烈影响 pathway，但还要看 predicate、controls、exemption 等因素',
+        D: 'Pathway 只由市场部决定',
+      },
+    })
+    expect(result.questions[1]).toMatchObject({
+      id: 'day-real-q2',
+      label: 'Q2',
+      correctAnswer: 'C',
+      explanation: 'Controls 是监管控制包，不是单一实验或单一法规。',
+    })
+    expect(result.contentWithoutQuestions).toContain('## S1｜Class 和 pathway')
+    expect(result.contentWithoutQuestions).toContain('## R｜晚上回收问题')
+    expect(result.contentWithoutQuestions).not.toMatch(/## Q\d|Answer:|Explanation:|正确答案：|解析：|A[.、]/)
+  })
 })
