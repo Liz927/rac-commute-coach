@@ -1,26 +1,32 @@
+import {
+  getQuestionAnswer,
+  getQuestionNumber,
+  getQuestionOptions,
+  getQuestionStem,
+} from './day'
+import { parseMarkdown } from './markdown'
+
 export const STORAGE_KEY = 'rac-commute-coach-data'
 export const DATA_VERSION = 1
 
 function normalizeQuestion(question, index) {
+  const answer = getQuestionAnswer(question)
   return {
     id: question.id || `imported-question-${index + 1}`,
-    label: question.label || `Q${index + 1}`,
+    number: getQuestionNumber(question, index + 1),
     title: question.title || '默想题',
-    question: question.question || '',
-    options: {
-      A: question.options?.A || '',
-      B: question.options?.B || '',
-      C: question.options?.C || '',
-      D: question.options?.D || '',
-    },
-    correctAnswer: ['A', 'B', 'C', 'D'].includes(question.correctAnswer)
-      ? question.correctAnswer
+    stem: getQuestionStem(question),
+    options: getQuestionOptions(question),
+    answer: ['A', 'B', 'C', 'D'].includes(answer)
+      ? answer
       : 'A',
     explanation: question.explanation || '',
     userAnswer: ['A', 'B', 'C', 'D'].includes(question.userAnswer)
       ? question.userAnswer
       : undefined,
     isUnsure: Boolean(question.isUnsure),
+    wantsToAsk: Boolean(question.wantsToAsk),
+    isImportant: Boolean(question.isImportant),
     showAnswer: Boolean(question.showAnswer),
     note: question.note || '',
     source: question.source || 'manual',
@@ -67,20 +73,28 @@ function normalizeQuickNote(note, index) {
 
 function normalizeDay(day, index) {
   const now = new Date().toISOString()
+  const id = day.id || `imported-day-${index + 1}`
+  const parsed = parseMarkdown(day.contentMarkdown || '', id)
+  const importedQuestions = Array.isArray(day.questions)
+    ? day.questions.map((question, questionIndex) => normalizeQuestion(question, questionIndex))
+    : []
+  const parsedQuestions = parsed.questions.map((question, questionIndex) =>
+    normalizeQuestion(question, questionIndex),
+  )
+  const questions = importedQuestions.length ? importedQuestions : parsedQuestions
+
   return {
-    id: day.id || `imported-day-${index + 1}`,
+    id,
     dayNumber: Number(day.dayNumber) || index + 1,
     title: day.title || '',
-    contentMarkdown: day.contentMarkdown || '',
+    contentMarkdown: parsed.contentWithoutQuestions,
     completed: Boolean(day.completed),
     notes: day.notes || '',
     freeNotes: day.freeNotes || '',
     quickDraft: day.quickDraft || '',
     reviewDraft: day.reviewDraft || '',
-    sections: Array.isArray(day.sections) ? day.sections : [],
-    questions: Array.isArray(day.questions)
-      ? day.questions.map((question, questionIndex) => normalizeQuestion(question, questionIndex))
-      : [],
+    sections: parsed.sections.length ? parsed.sections : Array.isArray(day.sections) ? day.sections : [],
+    questions,
     marks: Array.isArray(day.marks) ? day.marks : [],
     sectionNotes: Array.isArray(day.sectionNotes)
       ? day.sectionNotes.map(normalizeSectionNote)

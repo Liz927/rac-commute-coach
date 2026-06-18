@@ -1,13 +1,22 @@
 import { Eye, EyeOff, HelpCircle } from 'lucide-react'
-import { upsertQuestionNote } from '../lib/day'
+import {
+  OPTION_KEYS,
+  getQuestionAnswer,
+  getQuestionLabel,
+  getQuestionOptions,
+  getQuestionStem,
+  upsertQuestionNote,
+} from '../lib/day'
 import InlineNote from './InlineNote'
 import MarkButtons from './MarkButtons'
 
-const OPTION_KEYS = ['A', 'B', 'C', 'D']
-
 export default function QuestionCard({ day, question, onUpdate }) {
+  const label = getQuestionLabel(question)
+  const stem = getQuestionStem(question)
+  const answer = getQuestionAnswer(question)
+  const options = getQuestionOptions(question)
   const answered = Boolean(question.userAnswer)
-  const isCorrect = answered && question.userAnswer === question.correctAnswer
+  const isCorrect = answered && question.userAnswer === answer
   const questionNote =
     (day.questionNotes || []).find((note) => note.questionId === question.id)?.note ||
     question.note ||
@@ -27,7 +36,7 @@ export default function QuestionCard({ day, question, onUpdate }) {
       ...day,
       questionNotes: upsertQuestionNote(day.questionNotes || [], {
         questionId: question.id,
-        questionLabel: question.label,
+        questionLabel: label,
         note,
       }),
     })
@@ -35,12 +44,13 @@ export default function QuestionCard({ day, question, onUpdate }) {
 
   return (
     <article className="question-card">
-      <div className="question-label">{question.label}｜{question.title || '默想题'}</div>
-      <h3>{question.question || '未填写题目'}</h3>
+      <div className="question-label">{label}｜{question.title || '默想题'}</div>
+      <h3>{stem || '未填写题目'}</h3>
       <div className="answer-grid">
-        {OPTION_KEYS.map((key) => {
+        {options.map((option) => {
+          const key = option.key
           const selected = question.userAnswer === key
-          const revealedCorrect = question.showAnswer && question.correctAnswer === key
+          const revealedCorrect = question.showAnswer && answer === key
           const revealedWrong = question.showAnswer && selected && !isCorrect
           return (
             <button
@@ -54,7 +64,7 @@ export default function QuestionCard({ day, question, onUpdate }) {
               onClick={() => updateQuestion({ userAnswer: key })}
             >
               <strong>{key}</strong>
-              <span>{question.options[key] || `选项 ${key}`}</span>
+              <span>{option.text || `选项 ${key}`}</span>
             </button>
           )
         })}
@@ -79,10 +89,10 @@ export default function QuestionCard({ day, question, onUpdate }) {
 
       {question.showAnswer && (
         <div className={`answer-reveal ${isCorrect ? 'correct' : answered ? 'wrong' : ''}`}>
-          <strong>正确答案：{question.correctAnswer || '未设置'}</strong>
+          <strong>正确答案：{answer || '未设置'}</strong>
           {answered && (
             <span>
-              你选了 {question.userAnswer}，正确答案是 {question.correctAnswer}
+              你选了 {question.userAnswer}，正确答案是 {answer}
               {isCorrect ? '。回答正确。' : '。'}
             </span>
           )}
@@ -95,8 +105,8 @@ export default function QuestionCard({ day, question, onUpdate }) {
         marks={day.marks}
         targetType="question"
         targetId={question.id}
-        targetLabel={`D${day.dayNumber}-${question.label}`}
-        excerpt={question.question}
+        targetLabel={`D${day.dayNumber}-${label}`}
+        excerpt={stem}
         onChange={(marks) => onUpdate({ ...day, marks })}
       />
       <InlineNote

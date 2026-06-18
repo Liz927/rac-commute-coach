@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { buildQuestionPackage } from '../lib/package'
-import { mergeParsedQuestions, upsertQuickNote, upsertSectionNote } from '../lib/day'
+import { upsertQuickNote, upsertSectionNote } from '../lib/day'
 import { parseMarkdown } from '../lib/markdown'
 import InlineNote from './InlineNote'
 import MarkButtons from './MarkButtons'
@@ -121,13 +121,11 @@ function QuickNotesList({ day, onUpdate }) {
 }
 
 export default function DayReader({ day, onBack, onEdit, onUpdate }) {
+  const [activeTab, setActiveTab] = useState('reading')
   const [showPackage, setShowPackage] = useState(false)
   const [copied, setCopied] = useState(false)
   const parsed = useMemo(() => parseMarkdown(day.contentMarkdown, day.id), [day])
-  const questions = useMemo(
-    () => mergeParsedQuestions(day.questions || [], parsed.questions),
-    [day.questions, parsed.questions],
-  )
+  const questions = day.questions || []
   const effectiveDay = useMemo(
     () => ({
       ...day,
@@ -216,75 +214,106 @@ export default function DayReader({ day, onBack, onEdit, onUpdate }) {
         </button>
       </div>
 
+      <div className="reader-tabs" role="tablist" aria-label="Day 内容切换">
+        <button
+          className={activeTab === 'reading' ? 'is-active' : ''}
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'reading'}
+          onClick={() => setActiveTab('reading')}
+        >
+          阅读
+        </button>
+        <button
+          className={activeTab === 'questions' ? 'is-active' : ''}
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'questions'}
+          onClick={() => setActiveTab('questions')}
+        >
+          默想题 {questions.length ? `(${questions.length})` : ''}
+        </button>
+      </div>
+
       <article className="reading-paper">
-        {sections.length ? (
-          sections.map((section) => (
-            <SectionContent
-              key={section.id}
-              section={section}
-              day={effectiveDay}
-              onUpdate={updateEffectiveDay}
-            />
-          ))
-        ) : (
-          <div className="markdown-body standalone-markdown">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {parsed.contentWithoutQuestions || day.contentMarkdown}
-            </ReactMarkdown>
-          </div>
+        {activeTab === 'reading' && (
+          <>
+            {sections.length ? (
+              sections.map((section) => (
+                <SectionContent
+                  key={section.id}
+                  section={section}
+                  day={effectiveDay}
+                  onUpdate={updateEffectiveDay}
+                />
+              ))
+            ) : (
+              <div className="markdown-body standalone-markdown">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {parsed.contentWithoutQuestions}
+                </ReactMarkdown>
+              </div>
+            )}
+
+            <section className="free-notes-section">
+              <details>
+                <summary>
+                  <span>我的自由备注</span>
+                  <small>{freeNoteCount ? `已记录 ${freeNoteCount} 条` : '未记录'}</small>
+                </summary>
+                <InlineNote
+                  buttonLabel="编辑自由备注"
+                  savedLabel="有内容"
+                  placeholder={`controls 和 evidence 的区别还是有点混
+De Novo 和 PMA 的边界想再问
+这段和我 BRCA CE 经历可以怎么对应`}
+                  value={effectiveDay.freeNotes || ''}
+                  onSave={saveFreeNotes}
+                  minRows={5}
+                />
+                <div className="quick-notes-panel">
+                  <div className="quick-notes-panel-head">
+                    <strong>随手疑问</strong>
+                    <span>{(effectiveDay.quickNotes || []).length} 条</span>
+                  </div>
+                  <QuickNotesList day={effectiveDay} onUpdate={updateReaderDay} />
+                </div>
+              </details>
+            </section>
+
+            <section className="recovery-section">
+              <p className="eyebrow">EVENING REVIEW</p>
+              <h2>把今天卡住的地方带回去</h2>
+              <p>想问、不确定、答错题和自由备注，会自动整理成一段可复制文本。</p>
+              <button className="primary-button" type="button" onClick={openPackage}>
+                生成今日问题包
+              </button>
+            </section>
+          </>
         )}
 
-        {!!questions.length && (
+        {activeTab === 'questions' && (
           <section className="questions-section">
             <div className="reading-heading">
               <span>QUIZ</span>
               <h2>默想题</h2>
             </div>
-            {questions.map((question) => (
-              <QuestionCard
-                key={question.id}
-                day={effectiveDay}
-                question={question}
-                onUpdate={updateEffectiveDay}
-              />
-            ))}
+            {questions.length ? (
+              questions.map((question) => (
+                <QuestionCard
+                  key={question.id}
+                  day={effectiveDay}
+                  question={question}
+                  onUpdate={updateEffectiveDay}
+                />
+              ))
+            ) : (
+              <div className="empty-questions-panel">
+                今天还没有题目。可以在编辑页添加，或从 Markdown 自动迁移。
+              </div>
+            )}
           </section>
         )}
-
-        <section className="free-notes-section">
-          <details>
-            <summary>
-              <span>我的自由备注</span>
-              <small>{freeNoteCount ? `已记录 ${freeNoteCount} 条` : '未记录'}</small>
-            </summary>
-            <InlineNote
-              buttonLabel="编辑自由备注"
-              savedLabel="有内容"
-              placeholder={`controls 和 evidence 的区别还是有点混
-De Novo 和 PMA 的边界想再问
-这段和我 BRCA CE 经历可以怎么对应`}
-              value={effectiveDay.freeNotes || ''}
-              onSave={saveFreeNotes}
-              minRows={5}
-            />
-            <div className="quick-notes-panel">
-              <div className="quick-notes-panel-head">
-                <strong>随手疑问</strong>
-                <span>{(effectiveDay.quickNotes || []).length} 条</span>
-              </div>
-              <QuickNotesList day={effectiveDay} onUpdate={updateReaderDay} />
-            </div>
-          </details>
-        </section>
-
-        <section className="recovery-section">
-          <p className="eyebrow">EVENING REVIEW</p>
-          <h2>把今天卡住的地方带回去</h2>
-          <p>想问、不确定、答错题和自由备注，会自动整理成一段可复制文本。</p>
-          <button className="primary-button" type="button" onClick={openPackage}>
-            生成今日问题包
-          </button>
-        </section>
 
         {showPackage && (
           <section className="package-panel">

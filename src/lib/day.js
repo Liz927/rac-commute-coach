@@ -3,17 +3,54 @@ function makeId(prefix = 'item') {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }
 
+export const OPTION_KEYS = ['A', 'B', 'C', 'D']
+
+export function getQuestionNumber(question, fallback = 1) {
+  if (Number(question.number)) return Number(question.number)
+  const labelMatch = String(question.label || '').match(/\d+/)
+  return labelMatch ? Number(labelMatch[0]) : fallback
+}
+
+export function getQuestionLabel(question, fallback = 1) {
+  return `Q${getQuestionNumber(question, fallback)}`
+}
+
+export function getQuestionStem(question) {
+  return question.stem ?? question.question ?? ''
+}
+
+export function getQuestionAnswer(question) {
+  return question.answer ?? question.correctAnswer ?? 'A'
+}
+
+export function getQuestionOptions(question) {
+  if (Array.isArray(question.options)) {
+    const byKey = new Map(question.options.map((option) => [option.key, option.text || '']))
+    return OPTION_KEYS.map((key) => ({ key, text: byKey.get(key) || '' }))
+  }
+
+  return OPTION_KEYS.map((key) => ({ key, text: question.options?.[key] || '' }))
+}
+
+export function updateQuestionOption(question, key, text) {
+  return getQuestionOptions(question).map((option) =>
+    option.key === key ? { ...option, text } : option,
+  )
+}
+
 export function createEmptyQuestion(index = 1) {
   return {
     id: makeId('question'),
-    label: `Q${index}`,
+    number: index,
     title: '默想题',
-    question: '',
-    options: { A: '', B: '', C: '', D: '' },
-    correctAnswer: 'A',
+    stem: '',
+    options: OPTION_KEYS.map((key) => ({ key, text: '' })),
+    answer: 'A',
     explanation: '',
     userAnswer: undefined,
     isUnsure: false,
+    wantsToAsk: false,
+    isImportant: false,
     showAnswer: false,
     note: '',
     source: 'manual',
@@ -133,7 +170,7 @@ export function getDayStats(day) {
     answered: answeredQuestions.length,
     totalQuestions: questions.length,
     correct: answeredQuestions.filter(
-      (question) => question.userAnswer === question.correctAnswer,
+      (question) => question.userAnswer === getQuestionAnswer(question),
     ).length,
     marks: {
       question: marks.filter((mark) => mark.markType === 'question').length,
@@ -160,14 +197,20 @@ export function getOverallStats(days) {
 
 export function mergeParsedQuestions(existing = [], parsed = []) {
   const existingById = new Map(existing.map((question) => [question.id, question]))
-  const existingByLabel = new Map(existing.map((question) => [question.label, question]))
+  const existingByLabel = new Map(
+    existing.map((question, index) => [getQuestionLabel(question, index + 1), question]),
+  )
   const mergedParsed = parsed.map((question) => {
-    const previous = existingById.get(question.id) || existingByLabel.get(question.label)
+    const previous =
+      existingById.get(question.id) ||
+      existingByLabel.get(getQuestionLabel(question, question.number || 1))
     return previous
       ? {
           ...question,
           userAnswer: previous.userAnswer,
           isUnsure: previous.isUnsure,
+          wantsToAsk: previous.wantsToAsk,
+          isImportant: previous.isImportant,
           showAnswer: previous.showAnswer,
           title: question.title || previous.title,
           note: previous.note || question.note,

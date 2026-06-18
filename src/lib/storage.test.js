@@ -117,6 +117,55 @@ describe('normalizeImport', () => {
     expect(JSON.stringify(result)).not.toContain('casual.mp3')
   })
 
+  it('migrates legacy markdown question blocks into structured questions on import', () => {
+    const result = normalizeImport({
+      version: 1,
+      days: [
+        {
+          id: 'legacy-day',
+          dayNumber: 6,
+          title: 'Legacy quiz',
+          contentMarkdown: `# RAC Day 6｜Legacy quiz
+
+## S1｜正文
+
+这里只是阅读正文。
+
+## Q1｜默想题
+
+哪一个说法正确？
+
+A. 错误选项
+B. 正确选项
+C. 其他选项
+D. 其他选项
+
+Answer: B
+
+Explanation: 这是解释。`,
+        },
+      ],
+    })
+
+    expect(result.days[0].contentMarkdown).toContain('## S1｜正文')
+    expect(result.days[0].contentMarkdown).not.toMatch(/## Q1|Answer:|Explanation:/)
+    expect(result.days[0].questions).toEqual([
+      expect.objectContaining({
+        id: 'legacy-day-q1',
+        number: 1,
+        stem: '哪一个说法正确？',
+        answer: 'B',
+        explanation: '这是解释。',
+        options: [
+          { key: 'A', text: '错误选项' },
+          { key: 'B', text: '正确选项' },
+          { key: 'C', text: '其他选项' },
+          { key: 'D', text: '其他选项' },
+        ],
+      }),
+    ])
+  })
+
   it('rejects payloads without a days array', () => {
     expect(() => normalizeImport({ version: 1 })).toThrow('备份文件缺少 days 数组')
   })

@@ -1,12 +1,20 @@
 import { ArrowLeft, FileScan, Plus, Save, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { createEmptyQuestion, mergeParsedQuestions } from '../lib/day'
+import {
+  OPTION_KEYS,
+  createEmptyQuestion,
+  getQuestionAnswer,
+  getQuestionLabel,
+  getQuestionOptions,
+  getQuestionStem,
+  mergeParsedQuestions,
+  updateQuestionOption,
+} from '../lib/day'
 import { parseMarkdown } from '../lib/markdown'
-
-const OPTION_KEYS = ['A', 'B', 'C', 'D']
 
 export default function DayEditor({ initialDay, onSave, onCancel }) {
   const [day, setDay] = useState(() => structuredClone(initialDay))
+  const [extractMessage, setExtractMessage] = useState('')
   const parsed = useMemo(
     () => parseMarkdown(day.contentMarkdown, day.id),
     [day.contentMarkdown, day.id],
@@ -21,26 +29,68 @@ export default function DayEditor({ initialDay, onSave, onCancel }) {
     }))
   }
 
-  function applyParsing() {
+  function renumberQuestions(questions) {
+    return questions.map((question, index) => ({
+      ...question,
+      number: index + 1,
+    }))
+  }
+
+  function extractQuestionsFromMarkdown() {
+    const latest = parseMarkdown(day.contentMarkdown, day.id)
     setDay((current) => ({
       ...current,
-      dayNumber: parsed.dayNumber ?? current.dayNumber,
-      title: current.title || parsed.topicTitle || parsed.title,
-      sections: parsed.sections,
-      questions: mergeParsedQuestions(current.questions, parsed.questions),
+      dayNumber: latest.dayNumber ?? current.dayNumber,
+      title: current.title || latest.topicTitle || latest.title,
+      contentMarkdown: latest.contentWithoutQuestions,
+      sections: latest.sections,
+      questions: renumberQuestions(mergeParsedQuestions(current.questions, latest.questions)),
     }))
+    setExtractMessage(
+      latest.questions.length
+        ? `成功提取 ${latest.questions.length} 道题，正文里的 Q 区块已移除。`
+        : '没有识别到可提取的题目，可以在下方手动添加。',
+    )
+  }
+
+  function addQuestion() {
+    setDay((current) => ({
+      ...current,
+      questions: [...current.questions, createEmptyQuestion(current.questions.length + 1)],
+    }))
+  }
+
+  function deleteQuestion(id) {
+    setDay((current) => ({
+      ...current,
+      questions: renumberQuestions(current.questions.filter((item) => item.id !== id)),
+    }))
+  }
+
+  function moveQuestion(id, direction) {
+    setDay((current) => {
+      const index = current.questions.findIndex((question) => question.id === id)
+      const nextIndex = index + direction
+      if (index < 0 || nextIndex < 0 || nextIndex >= current.questions.length) return current
+      const questions = [...current.questions]
+      const [item] = questions.splice(index, 1)
+      questions.splice(nextIndex, 0, item)
+      return { ...current, questions: renumberQuestions(questions) }
+    })
   }
 
   function submit(event) {
     event.preventDefault()
     const latest = parseMarkdown(day.contentMarkdown, day.id)
     const manualTitle = day.title.trim()
+    const questions = renumberQuestions(mergeParsedQuestions(day.questions, latest.questions))
     onSave({
       ...day,
+      contentMarkdown: latest.contentWithoutQuestions,
       dayNumber: latest.dayNumber ?? (Number(day.dayNumber) || 1),
       title: manualTitle || latest.topicTitle || latest.title || '未命名主题',
       sections: latest.sections,
-      questions: mergeParsedQuestions(day.questions, latest.questions),
+      questions,
       updatedAt: new Date().toISOString(),
     })
   }
@@ -89,7 +139,10 @@ export default function DayEditor({ initialDay, onSave, onCancel }) {
         </label>
 
         <label>
-          Markdown 学习材料
+          正文 Markdown
+          <small className="field-hint">
+            正文区只放阅读内容，不建议放 Q1/Q2 默想题。题目请在下方题目区单独添加。
+          </small>
           <textarea
             className="markdown-input"
             value={day.contentMarkdown}
@@ -100,13 +153,14 @@ export default function DayEditor({ initialDay, onSave, onCancel }) {
 
         <div className="parse-panel">
           <div>
-            <strong>识别预览</strong>
-            <span>{parsed.sections.length} 个段落 · {parsed.questions.length} 道题</span>
+            <strong>旧 Markdown 迁移</strong>
+            <span>{parsed.sections.length} 个段落 · 可提取 {parsed.questions.length} 道题</span>
           </div>
-          <button type="button" onClick={applyParsing}>
-            <FileScan size={18} /> 解析 Markdown
+          <button type="button" onClick={extractQuestionsFromMarkdown}>
+            <FileScan size={18} /> 从正文中提取默想题
           </button>
         </div>
+        {extractMessage && <p className="parse-message">{extractMessage}</p>}
 
         <label>
           自由备注
@@ -120,72 +174,62 @@ export default function DayEditor({ initialDay, onSave, onCancel }) {
         <section className="manual-questions">
           <div className="section-heading">
             <div>
-              <h2>手工题目</h2>
-              <p>自动解析不合适时，可在这里补充或修改。</p>
+              <h2>题目区</h2>
+              <p>题目会单独保存和渲染，不再混在 Markdown 正文里。</p>
             </div>
-            <button
-              type="button"
-              onClick={() =>
-                setDay((current) => ({
-                  ...current,
-                  questions: [
-                    ...current.questions,
-                    createEmptyQuestion(current.questions.length + 1),
-                  ],
-                }))
-              }
-            >
+            <button type="button" onClick={addQuestion}>
               <Plus size={18} /> 添加题目
             </button>
           </div>
 
-          {day.questions.map((question) => (
+          {day.questions.map((question, index) => {
+            const label = getQuestionLabel(question, index + 1)
+            const options = getQuestionOptions(question)
+            return (
             <fieldset className="question-editor" key={question.id}>
-              <legend>{question.label}</legend>
+              <legend>{label}｜{question.title || '默想题'}</legend>
               <div className="question-editor-head">
                 <input
-                  aria-label="题目标签"
-                  value={question.label}
-                  onChange={(event) => updateQuestion(question.id, { label: event.target.value })}
+                  aria-label="题目类型"
+                  value={question.title || ''}
+                  onChange={(event) => updateQuestion(question.id, { title: event.target.value })}
+                  placeholder="默想题 / 情景题 / 术语题"
                 />
+                <button type="button" onClick={() => moveQuestion(question.id, -1)}>上移</button>
+                <button type="button" onClick={() => moveQuestion(question.id, 1)}>下移</button>
                 <button
                   type="button"
-                  aria-label={`删除 ${question.label}`}
-                  onClick={() =>
-                    setDay((current) => ({
-                      ...current,
-                      questions: current.questions.filter((item) => item.id !== question.id),
-                    }))
-                  }
+                  aria-label={`删除 ${label}`}
+                  onClick={() => deleteQuestion(question.id)}
                 >
                   <Trash2 size={18} />
                 </button>
               </div>
               <textarea
-                value={question.question}
-                onChange={(event) => updateQuestion(question.id, { question: event.target.value })}
-                placeholder="题目内容"
+                value={getQuestionStem(question)}
+                onChange={(event) => updateQuestion(question.id, { stem: event.target.value })}
+                placeholder="题干 stem"
               />
-              {OPTION_KEYS.map((key) => (
-                <label className="option-edit" key={key}>
-                  <span>{key}</span>
+              {options.map((option) => (
+                <label className="option-edit" key={option.key}>
+                  <span>{option.key}</span>
                   <input
-                    value={question.options[key]}
+                    value={option.text}
                     onChange={(event) =>
                       updateQuestion(question.id, {
-                        options: { ...question.options, [key]: event.target.value },
+                        options: updateQuestionOption(question, option.key, event.target.value),
                       })
                     }
-                    placeholder={`选项 ${key}`}
+                    placeholder={`选项 ${option.key}`}
                   />
                 </label>
               ))}
               <label>
                 正确答案
                 <select
-                  value={question.correctAnswer}
+                  value={getQuestionAnswer(question)}
                   onChange={(event) =>
-                    updateQuestion(question.id, { correctAnswer: event.target.value })
+                    updateQuestion(question.id, { answer: event.target.value })
                   }
                 >
                   {OPTION_KEYS.map((key) => <option key={key}>{key}</option>)}
@@ -201,7 +245,8 @@ export default function DayEditor({ initialDay, onSave, onCancel }) {
                 />
               </label>
             </fieldset>
-          ))}
+            )
+          })}
         </section>
 
         <button className="primary-button save-button" type="submit">

@@ -1,3 +1,5 @@
+import { getQuestionAnswer, getQuestionLabel, getQuestionStem } from './day'
+
 function noteText(note) {
   return note?.trim() || ''
 }
@@ -31,7 +33,7 @@ function formatMarks(day, marks, emptyText) {
 }
 
 function questionLabel(day, question) {
-  return `D${day.dayNumber}-${question.label}`
+  return `D${day.dayNumber}-${getQuestionLabel(question)}`
 }
 
 function sectionNoteLabel(day, note) {
@@ -48,7 +50,19 @@ function quickNoteTagLabel(tag) {
 }
 
 export function buildQuestionPackage(day) {
-  const questionMarks = (day.marks || []).filter((mark) => mark.markType === 'question')
+  const flaggedQuestionMarks = (day.questions || [])
+    .filter((question) => question.wantsToAsk)
+    .map((question) => ({
+      targetLabel: questionLabel(day, question),
+      targetType: 'question',
+      targetId: question.id,
+      excerpt: getQuestionStem(question),
+      note: findQuestionNote(day, question.id)?.note || question.note || '',
+    }))
+  const questionMarks = [
+    ...(day.marks || []).filter((mark) => mark.markType === 'question'),
+    ...flaggedQuestionMarks,
+  ]
   const markedUnsure = (day.marks || []).filter((mark) => mark.markType === 'unsure')
   const unsureQuestionMarks = (day.questions || [])
     .filter((question) => question.isUnsure)
@@ -56,21 +70,33 @@ export function buildQuestionPackage(day) {
       targetLabel: questionLabel(day, question),
       targetType: 'question',
       targetId: question.id,
-      excerpt: question.question,
+      excerpt: getQuestionStem(question),
       note: findQuestionNote(day, question.id)?.note || question.note || '',
     }))
   const unsureMarks = [...markedUnsure, ...unsureQuestionMarks]
-  const importantMarks = (day.marks || []).filter((mark) => mark.markType === 'important')
+  const importantQuestionMarks = (day.questions || [])
+    .filter((question) => question.isImportant)
+    .map((question) => ({
+      targetLabel: questionLabel(day, question),
+      targetType: 'question',
+      targetId: question.id,
+      excerpt: getQuestionStem(question),
+      note: findQuestionNote(day, question.id)?.note || question.note || '',
+    }))
+  const importantMarks = [
+    ...(day.marks || []).filter((mark) => mark.markType === 'important'),
+    ...importantQuestionMarks,
+  ]
   const wrongQuestions = (day.questions || []).filter(
     (question) =>
-      question.userAnswer && question.correctAnswer && question.userAnswer !== question.correctAnswer,
+      question.userAnswer && getQuestionAnswer(question) && question.userAnswer !== getQuestionAnswer(question),
   )
   const wrongText = wrongQuestions.length
     ? wrongQuestions
         .map((question, index) => {
           const questionNote = noteText(findQuestionNote(day, question.id)?.note || question.note)
           const noteLine = questionNote ? `\n   我的备注：${questionNote}` : ''
-          return `${index + 1}. ${question.label}\n   题目：${question.question}\n   我的答案：${question.userAnswer}\n   正确答案：${question.correctAnswer}\n   解释：${question.explanation || '暂无解释'}${noteLine}`
+          return `${index + 1}. ${getQuestionLabel(question)}\n   题目：${getQuestionStem(question)}\n   我的答案：${question.userAnswer}\n   正确答案：${getQuestionAnswer(question)}\n   解释：${question.explanation || '暂无解释'}${noteLine}`
         })
         .join('\n')
     : '无'

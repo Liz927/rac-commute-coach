@@ -52,7 +52,6 @@ function parseQuestionBlock(headingLine, contentLines, dayId) {
   if (!headingMatch) return null
 
   const number = Number(headingMatch[1])
-  const label = `Q${number}`
   const title = headingMatch[2]?.trim() || '\u9ED8\u60F3\u9898'
   const lines = contentLines.flatMap(splitInlineOptions)
   const optionIndex = lines.findIndex((line) => OPTION_RE.test(line.trim()))
@@ -93,14 +92,16 @@ function parseQuestionBlock(headingLine, contentLines, dayId) {
 
   return {
     id: `${dayId}-q${number}`,
-    label,
+    number,
     title,
-    question: lines.slice(0, optionIndex).map(cleanLine).filter(Boolean).join('\n').trim(),
-    options,
-    correctAnswer,
+    stem: lines.slice(0, optionIndex).map(cleanLine).filter(Boolean).join('\n').trim(),
+    options: ['A', 'B', 'C', 'D'].map((key) => ({ key, text: options[key] })),
+    answer: correctAnswer,
     explanation,
     userAnswer: undefined,
     isUnsure: false,
+    wantsToAsk: false,
+    isImportant: false,
     showAnswer: false,
     note: '',
     source: 'parsed',
@@ -120,6 +121,7 @@ export function parseMarkdownToSectionsAndQuestions(markdown = '', dayId = 'day'
     const questionHeading = line.match(QUESTION_HEADING_RE)
 
     if (!questionHeading) {
+      if (ANSWER_RE.test(line.trim()) || EXPLANATION_RE.test(line.trim())) continue
       contentLines.push(line)
       continue
     }
