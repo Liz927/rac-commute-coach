@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, Clipboard, Edit3 } from 'lucide-react'
+import { ArrowLeft, Check, Clipboard, Edit3, ListTree, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -62,7 +62,7 @@ function SectionContent({ section, day, onUpdate }) {
 
   if (section.collapsible) {
     return (
-      <details className="term-section visual-map-card is-terms" open>
+      <details id={section.id} className="term-section visual-map-card is-terms" open>
         <summary>
           <span>{section.label}</span>
           {section.title}
@@ -73,13 +73,57 @@ function SectionContent({ section, day, onUpdate }) {
   }
 
   return (
-    <section className={`reading-section visual-map-card ${getSectionTone(section.label)}`}>
+    <section
+      id={section.id}
+      className={`reading-section visual-map-card ${getSectionTone(section.label)}`}
+    >
       <div className="reading-heading">
         <span>{section.label}</span>
         <h2>{section.title}</h2>
       </div>
       <div className="markdown-body">{body}</div>
     </section>
+  )
+}
+
+function ReaderLookup({ sections, query, isOpen, onToggle, onQueryChange, onJump }) {
+  const normalizedQuery = query.trim().toLowerCase()
+  const matches = normalizedQuery
+    ? sections.filter((section) =>
+      `${section.label}\n${section.title}\n${section.content}`.toLowerCase().includes(normalizedQuery),
+    )
+    : sections
+
+  return (
+    <aside className={`reader-lookup ${isOpen ? 'is-open' : ''}`} aria-label="目录与搜索">
+      <button className="reader-lookup-toggle" type="button" onClick={onToggle}>
+        <ListTree size={18} />
+        <span>目录 / 搜索</span>
+        <small>{sections.length} 段</small>
+      </button>
+      <div className="reader-lookup-panel">
+        <label className="reader-lookup-search">
+          <Search size={17} />
+          <input
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="搜本 Day：predicate / S2 / controls"
+          />
+        </label>
+        <nav className="reader-toc" aria-label="当前 Day 目录">
+          {matches.length ? (
+            matches.map((section) => (
+              <button key={section.id} type="button" onClick={() => onJump(section.id)}>
+                <span>{section.label}</span>
+                <strong>{section.title}</strong>
+              </button>
+            ))
+          ) : (
+            <p>没有匹配的段落。</p>
+          )}
+        </nav>
+      </div>
+    </aside>
   )
 }
 
@@ -130,6 +174,8 @@ function QuickNotesList({ day, onUpdate }) {
 
 export default function DayReader({ day, onBack, onEdit, onUpdate }) {
   const [activeTab, setActiveTab] = useState('reading')
+  const [lookupOpen, setLookupOpen] = useState(false)
+  const [lookupQuery, setLookupQuery] = useState('')
   const [showPackage, setShowPackage] = useState(false)
   const [copied, setCopied] = useState(false)
   const parsed = useMemo(() => parseMarkdown(day.contentMarkdown, day.id), [day])
@@ -197,6 +243,13 @@ export default function DayReader({ day, onBack, onEdit, onUpdate }) {
     .map((line) => line.trim())
     .filter(Boolean).length
 
+  function jumpToSection(sectionId) {
+    setActiveTab('reading')
+    window.setTimeout(() => {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 80)
+  }
+
   return (
     <main className="reader-screen">
       <header className="reader-header">
@@ -243,9 +296,21 @@ export default function DayReader({ day, onBack, onEdit, onUpdate }) {
         </button>
       </div>
 
-      <article className="reading-paper">
-        {activeTab === 'reading' && (
-          <>
+      <div className="reader-content-shell">
+        {activeTab === 'reading' && sections.length ? (
+          <ReaderLookup
+            sections={sections}
+            query={lookupQuery}
+            isOpen={lookupOpen}
+            onToggle={() => setLookupOpen((current) => !current)}
+            onQueryChange={setLookupQuery}
+            onJump={jumpToSection}
+          />
+        ) : null}
+
+        <article className="reading-paper">
+          {activeTab === 'reading' && (
+            <>
             {sections.length ? (
               sections.map((section) => (
                 <SectionContent
@@ -297,11 +362,11 @@ De Novo 和 PMA 的边界想再问
                 生成今日问题包
               </button>
             </section>
-          </>
-        )}
+            </>
+          )}
 
-        {activeTab === 'questions' && (
-          <section className="questions-section">
+          {activeTab === 'questions' && (
+            <section className="questions-section">
             <div className="reading-heading">
               <span>QUIZ</span>
               <h2>默想题</h2>
@@ -320,11 +385,11 @@ De Novo 和 PMA 的边界想再问
                 今天还没有题目。可以在编辑页添加，或从 Markdown 自动迁移。
               </div>
             )}
-          </section>
-        )}
+            </section>
+          )}
 
-        {showPackage && (
-          <section className="package-panel">
+          {showPackage && (
+            <section className="package-panel">
             <div className="section-heading">
               <h2>今日问题包</h2>
               <button type="button" onClick={() => setShowPackage(false)}>收起</button>
@@ -346,9 +411,10 @@ De Novo 和 PMA 的边界想再问
                 {copied ? '已复制' : '一键复制'}
               </button>
             </div>
-          </section>
-        )}
-      </article>
+            </section>
+          )}
+        </article>
+      </div>
       <QuickNoteBar day={effectiveDay} onUpdate={updateReaderDay} />
     </main>
   )
