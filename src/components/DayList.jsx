@@ -7,10 +7,12 @@ export default function DayList({ days, onOpen, onEdit, onDelete, onAdd }) {
   const stats = getOverallStats(days)
   const filtered = useMemo(() => {
     const keyword = query.trim().toLowerCase()
-    if (!keyword) return days
-    return days.filter((day) =>
-      `${day.title}\n${day.contentMarkdown}`.toLowerCase().includes(keyword),
-    )
+    const matches = keyword
+      ? days.filter((day) =>
+        `${day.title}\n${day.contentMarkdown}`.toLowerCase().includes(keyword),
+      )
+      : days
+    return [...matches].sort((a, b) => Number(b.dayNumber) - Number(a.dayNumber))
   }, [days, query])
 
   return (
