@@ -25,6 +25,8 @@ describe('normalizeImport', () => {
     })
     expect(result.days[0]).not.toHaveProperty('audioScripts')
     expect(result.days[0]).not.toHaveProperty('audioFiles')
+    expect(result.quizQuestions).toEqual([])
+    expect(result.quizProgress).toBeNull()
   })
 
   it('ignores legacy Day audio fields while keeping text study data', () => {
@@ -93,28 +95,48 @@ describe('normalizeImport', () => {
   })
 
   it('does not export legacy Day audio metadata or large file payloads', () => {
-    const result = makeExportPayload([
-      {
-        id: 'd4',
-        dayNumber: 4,
-        audioFiles: {
-          casualAudio: {
-            audioFileId: 'casual-id',
-            name: 'casual.mp3',
-            type: 'audio/mpeg',
-            size: 123,
-            updatedAt: '2026-06-17T00:00:00.000Z',
-            blob: 'not allowed in JSON',
-            file: { tooLarge: true },
+    const result = makeExportPayload(
+      [
+        {
+          id: 'd4',
+          dayNumber: 4,
+          audioFiles: {
+            casualAudio: {
+              audioFileId: 'casual-id',
+              name: 'casual.mp3',
+              type: 'audio/mpeg',
+              size: 123,
+              updatedAt: '2026-06-17T00:00:00.000Z',
+              blob: 'not allowed in JSON',
+              file: { tooLarge: true },
+            },
           },
         },
+      ],
+      {
+        quizQuestions: [{ id: 'q1', prompt: 'Question?' }],
+        quizProgress: { attempts: [], starredQuestionIds: ['q1'] },
       },
-    ])
+    )
 
     expect(result.days[0]).not.toHaveProperty('audioFiles')
     expect(result.days[0]).not.toHaveProperty('audioScripts')
+    expect(result.quizQuestions).toEqual([{ id: 'q1', prompt: 'Question?' }])
+    expect(result.quizProgress).toEqual({ attempts: [], starredQuestionIds: ['q1'] })
     expect(JSON.stringify(result)).not.toContain('not allowed in JSON')
     expect(JSON.stringify(result)).not.toContain('casual.mp3')
+  })
+
+  it('imports quiz question bank and quiz progress from backups', () => {
+    const result = normalizeImport({
+      version: 1,
+      days: [],
+      quizQuestions: [{ id: 'q1', prompt: 'Question?' }],
+      quizProgress: { attempts: [], starredQuestionIds: ['q1'] },
+    })
+
+    expect(result.quizQuestions).toEqual([{ id: 'q1', prompt: 'Question?' }])
+    expect(result.quizProgress).toEqual({ attempts: [], starredQuestionIds: ['q1'] })
   })
 
   it('migrates legacy markdown question blocks into structured questions on import', () => {

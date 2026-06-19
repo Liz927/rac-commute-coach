@@ -1,11 +1,20 @@
 import { useMemo, useState } from 'react'
+import AddScreen from './components/AddScreen'
 import BackupScreen from './components/BackupScreen'
 import BottomNav from './components/BottomNav'
 import DayEditor from './components/DayEditor'
 import DayList from './components/DayList'
 import DayReader from './components/DayReader'
+import PackageImportScreen from './components/PackageImportScreen'
+import {
+  loadImportedQuestions,
+  mergeImportedQuestions,
+  saveImportedQuestions,
+} from './features/quiz/lib/storage'
+import QuizScreen from './features/quiz/components/QuizScreen'
 import { useDays } from './hooks/useDays'
 import { createEmptyDay } from './lib/day'
+import { applyLearningPackageToDays } from './lib/learningPackageImport'
 
 export default function App() {
   const { days, setDays, saveDay, updateDay, deleteDay } = useDays()
@@ -16,6 +25,10 @@ export default function App() {
   )
 
   function openAdd() {
+    setView({ name: 'add', dayId: null })
+  }
+
+  function openNewDayEditor() {
     const nextNumber = days.length ? Math.max(...days.map((day) => day.dayNumber)) + 1 : 1
     const draft = createEmptyDay(nextNumber)
     setView({ name: 'editor', dayId: draft.id, draft })
@@ -24,6 +37,22 @@ export default function App() {
   function navigate(target) {
     if (target === 'add') openAdd()
     else setView({ name: target, dayId: null })
+  }
+
+  function importLearningPackage(parsedPackage, { mode }) {
+    const dayImport = applyLearningPackageToDays(days, parsedPackage, { mode })
+    setDays(dayImport.days)
+
+    const mergedQuestions = mergeImportedQuestions(loadImportedQuestions(), parsedPackage.questions)
+    saveImportedQuestions(mergedQuestions.questions)
+
+    return {
+      dayId: dayImport.day.id,
+      dayTitle: dayImport.day.title,
+      dayAction: dayImport.dayAction,
+      addedQuestions: mergedQuestions.added,
+      updatedQuestions: mergedQuestions.updated,
+    }
   }
 
   if (view.name === 'reader' && selectedDay) {
@@ -51,9 +80,38 @@ export default function App() {
     )
   }
 
+  if (view.name === 'add') {
+    return (
+      <div className="app-shell">
+        <AddScreen
+          onNewDay={openNewDayEditor}
+          onImportPackage={() => setView({ name: 'packageImport', dayId: null })}
+        />
+        <BottomNav active="add" onNavigate={navigate} />
+      </div>
+    )
+  }
+
+  if (view.name === 'packageImport') {
+    return (
+      <div className="app-shell">
+        <PackageImportScreen
+          days={days}
+          onCancel={() => setView({ name: 'add', dayId: null })}
+          onImportPackage={importLearningPackage}
+          onOpenDay={(dayId) => setView({ name: 'reader', dayId })}
+          onOpenQuiz={() => setView({ name: 'quiz', dayId: null })}
+        />
+        <BottomNav active="add" onNavigate={navigate} />
+      </div>
+    )
+  }
+
   return (
     <div className="app-shell">
-      {view.name === 'backup' ? (
+      {view.name === 'quiz' ? (
+        <QuizScreen />
+      ) : view.name === 'backup' ? (
         <BackupScreen days={days} onImport={setDays} onClear={() => setDays([])} />
       ) : (
         <DayList
@@ -64,7 +122,10 @@ export default function App() {
           onAdd={openAdd}
         />
       )}
-      <BottomNav active={view.name === 'backup' ? 'backup' : 'days'} onNavigate={navigate} />
+      <BottomNav
+        active={view.name === 'backup' || view.name === 'quiz' ? view.name : 'days'}
+        onNavigate={navigate}
+      />
     </div>
   )
 }

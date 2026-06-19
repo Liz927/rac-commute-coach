@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rac-commute-coach-v1'
+const CACHE_NAME = 'rac-commute-coach-v2'
 const APP_SHELL = ['.', 'index.html', 'manifest.webmanifest', 'icon.svg'].map((path) =>
   new URL(path, self.registration.scope).toString(),
 )

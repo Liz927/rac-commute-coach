@@ -1,0 +1,281 @@
+{
+  "packId": "rac-device-placeholder-001",
+  "version": 1,
+  "title": "RAC Device Placeholder Question Pack",
+  "source": "gpt-generated-placeholder",
+  "isPlaceholder": true,
+  "questions": [
+    {
+      "id": "rac-placeholder-001",
+      "type": "single",
+      "domain": "Regulatory Strategy",
+      "tags": ["510k", "predicate"],
+      "difficulty": "easy",
+      "prompt": "PLACEHOLDER: Which US device pathway commonly relies on substantial equivalence to a predicate device?",
+      "options": [
+        { "id": "A", "text": "Traditional 510(k)" },
+        { "id": "B", "text": "Premarket Approval (PMA)" },
+        { "id": "C", "text": "Humanitarian Device Exemption" },
+        { "id": "D", "text": "Emergency Use Authorization" }
+      ],
+      "correctOptionIds": ["A"],
+      "explanation": "PLACEHOLDER: A traditional 510(k) generally compares the new device to a legally marketed predicate for substantial equivalence.",
+      "placeholder": true
+    },
+    {
+      "id": "rac-placeholder-002",
+      "type": "single",
+      "domain": "Regulatory Strategy",
+      "tags": ["PMA", "risk"],
+      "difficulty": "easy",
+      "prompt": "PLACEHOLDER: Which pathway is generally associated with high-risk Class III devices requiring valid scientific evidence?",
+      "options": [
+        { "id": "A", "text": "PMA" },
+        { "id": "B", "text": "General controls only" },
+        { "id": "C", "text": "Registration and listing only" },
+        { "id": "D", "text": "Custom device exemption" }
+      ],
+      "correctOptionIds": ["A"],
+      "explanation": "PLACEHOLDER: PMA is the most stringent device marketing application and is generally used for many Class III devices.",
+      "placeholder": true
+    },
+    {
+      "id": "rac-placeholder-003",
+      "type": "multiple",
+      "domain": "Quality Systems",
+      "tags": ["CAPA", "QMS"],
+      "difficulty": "medium",
+      "prompt": "PLACEHOLDER: Which sources can reasonably feed a CAPA investigation?",
+      "options": [
+        { "id": "A", "text": "Complaint trend data" },
+        { "id": "B", "text": "Nonconforming product records" },
+        { "id": "C", "text": "Supplier quality issues" },
+        { "id": "D", "text": "Office seating chart" }
+      ],
+      "correctOptionIds": ["A", "B", "C"],
+      "explanation": "PLACEHOLDER: Complaints, nonconformances, and supplier issues are typical signals that may trigger CAPA evaluation.",
+      "placeholder": true
+    },
+    {
+      "id": "rac-placeholder-004",
+      "type": "single",
+      "domain": "Quality Systems",
+      "tags": ["design controls", "DHF"],
+      "difficulty": "medium",
+      "prompt": "PLACEHOLDER: Which file generally contains records showing that design was developed according to the approved design plan?",
+      "options": [
+        { "id": "A", "text": "Device Master Record" },
+        { "id": "B", "text": "Design History File" },
+        { "id": "C", "text": "Device History Record" },
+        { "id": "D", "text": "Complaint file" }
+      ],
+      "correctOptionIds": ["B"],
+      "explanation": "PLACEHOLDER: The DHF documents the design history and demonstrates the design was developed under the design control plan.",
+      "placeholder": true
+    },
+    {
+      "id": "rac-placeholder-005",
+      "type": "single",
+      "domain": "Clinical Evidence",
+      "tags": ["IDE", "clinical"],
+      "difficulty": "medium",
+      "prompt": "PLACEHOLDER: In the US, which mechanism is commonly associated with clinical investigation of a significant-risk investigational device?",
+      "options": [
+        { "id": "A", "text": "IDE" },
+        { "id": "B", "text": "UDI" },
+        { "id": "C", "text": "MDR" },
+        { "id": "D", "text": "GUDID" }
+      ],
+      "correctOptionIds": ["A"],
+      "explanation": "PLACEHOLDER: An Investigational Device Exemption supports clinical study of certain investigational devices.",
+      "placeholder": true
+    },
+    {
+      "id": "rac-placeholder-006",
+      "type": "multiple",
+      "domain": "Postmarket",
+      "tags": ["MDR", "complaints"],
+      "difficulty": "medium",
+      "prompt": "PLACEHOLDER: Which events may require medical device reporting assessment?",
+      "options": [
+        { "id": "A", "text": "A death potentially related to the device" },
+        { "id": "B", "text": "A serious injury potentially related to the device" },
+        { "id": "C", "text": "A malfunction likely to cause or contribute to death or serious injury if it recurred" },
+        { "id": "D", "text": "A typo in a lunch menu" }
+      ],
+      "correctOptionIds": ["A", "B", "C"],
+      "explanation": "PLACEHOLDER: MDR assessment commonly focuses on deaths, serious injuries, and reportable malfunctions.",
+      "placeholder": true
+    },
+    {
+      "id": "rac-placeholder-007",
+      "type": "single",
+      "domain": "Labeling",
+      "tags": ["labeling", "intended use"],
+      "difficulty": "easy",
+      "prompt": "PLACEHOLDER: Device labeling is especially important because it helps define which concept?",
+      "options": [
+        { "id": "A", "text": "Intended use" },
+        { "id": "B", "text": "Office floor plan" },
+        { "id": "C", "text": "Employee bonus structure" },
+        { "id": "D", "text": "Server uptime target" }
+      ],
+      "correctOptionIds": ["A"],
+      "explanation": "PLACEHOLDER: Labeling claims and instructions can be key evidence of intended use.",
+      "placeholder": true
+    },
+    {
+      "id": "rac-placeholder-008",
+      "type": "single",
+      "domain": "International",
+      "tags": ["EU MDR", "technical documentation"],
+      "difficulty": "hard",
+      "prompt": "PLACEHOLDER: Under EU MDR planning, which artifact generally supports conformity assessment with product evidence?",
+      "options": [
+        { "id": "A", "text": "Technical documentation" },
+        { "id": "B", "text": "A sales forecast only" },
+        { "id": "C", "text": "A meeting room reservation" },
+        { "id": "D", "text": "A personal training log" }
+      ],
+      "correctOptionIds": ["A"],
+      "explanation": "PLACEHOLDER: Technical documentation organizes device description, design, risk, verification, validation, labeling, and other evidence.",
+      "placeholder": true
+    },
+    {
+      "id": "rac-placeholder-009",
+      "type": "multiple",
+      "domain": "Regulatory Strategy",
+      "tags": ["classification", "risk"],
+      "difficulty": "medium",
+      "prompt": "PLACEHOLDER: Which factors can influence device classification strategy?",
+      "options": [
+        { "id": "A", "text": "Intended use" },
+        { "id": "B", "text": "Technology and risk profile" },
+        { "id": "C", "text": "Existing classification regulations or product codes" },
+        { "id": "D", "text": "The color of the project folder" }
+      ],
+      "correctOptionIds": ["A", "B", "C"],
+      "explanation": "PLACEHOLDER: Intended use, technology, risk, and existing regulatory precedents are central to classification work.",
+      "placeholder": true
+    },
+    {
+      "id": "rac-placeholder-010",
+      "type": "single",
+      "domain": "Quality Systems",
+      "tags": ["DMR", "manufacturing"],
+      "difficulty": "medium",
+      "prompt": "PLACEHOLDER: Which record type contains specifications and procedures needed to manufacture a device?",
+      "options": [
+        { "id": "A", "text": "Device Master Record" },
+        { "id": "B", "text": "Design History File" },
+        { "id": "C", "text": "Medical Device Report" },
+        { "id": "D", "text": "FDA Establishment Inspection Report" }
+      ],
+      "correctOptionIds": ["A"],
+      "explanation": "PLACEHOLDER: The DMR contains manufacturing specifications, procedures, and other production-related instructions.",
+      "placeholder": true
+    },
+    {
+      "id": "rac-placeholder-011",
+      "type": "single",
+      "domain": "Postmarket",
+      "tags": ["recall", "correction"],
+      "difficulty": "hard",
+      "prompt": "PLACEHOLDER: Which term generally describes repair, modification, adjustment, relabeling, or inspection of a device without physical removal?",
+      "options": [
+        { "id": "A", "text": "Correction" },
+        { "id": "B", "text": "Market withdrawal only" },
+        { "id": "C", "text": "Registration" },
+        { "id": "D", "text": "Predicate comparison" }
+      ],
+      "correctOptionIds": ["A"],
+      "explanation": "PLACEHOLDER: A correction addresses a problem with a device without necessarily removing it from where it is used or sold.",
+      "placeholder": true
+    },
+    {
+      "id": "rac-placeholder-012",
+      "type": "multiple",
+      "domain": "Clinical Evidence",
+      "tags": ["clinical evaluation", "evidence"],
+      "difficulty": "hard",
+      "prompt": "PLACEHOLDER: Which sources may contribute to a clinical evidence strategy?",
+      "options": [
+        { "id": "A", "text": "Clinical investigation data" },
+        { "id": "B", "text": "Scientific literature" },
+        { "id": "C", "text": "Postmarket clinical follow-up data where applicable" },
+        { "id": "D", "text": "A decorative product brochure only" }
+      ],
+      "correctOptionIds": ["A", "B", "C"],
+      "explanation": "PLACEHOLDER: Clinical evidence can come from investigations, literature, and postmarket sources depending on the regulatory context.",
+      "placeholder": true
+    },
+    {
+      "id": "rac-placeholder-013",
+      "type": "single",
+      "domain": "Labeling",
+      "tags": ["IFU", "warnings"],
+      "difficulty": "medium",
+      "prompt": "PLACEHOLDER: Which labeling element most directly communicates residual risks that users need to know?",
+      "options": [
+        { "id": "A", "text": "Warnings and precautions" },
+        { "id": "B", "text": "The manufacturer's logo size" },
+        { "id": "C", "text": "A stock photo choice" },
+        { "id": "D", "text": "A package color preference" }
+      ],
+      "correctOptionIds": ["A"],
+      "explanation": "PLACEHOLDER: Warnings and precautions communicate important risk information and safe-use limitations.",
+      "placeholder": true
+    },
+    {
+      "id": "rac-placeholder-014",
+      "type": "single",
+      "domain": "International",
+      "tags": ["ISO 14971", "risk management"],
+      "difficulty": "medium",
+      "prompt": "PLACEHOLDER: Which international standard is commonly associated with medical device risk management?",
+      "options": [
+        { "id": "A", "text": "ISO 14971" },
+        { "id": "B", "text": "ISO 8601" },
+        { "id": "C", "text": "HTML5" },
+        { "id": "D", "text": "SMTP" }
+      ],
+      "correctOptionIds": ["A"],
+      "explanation": "PLACEHOLDER: ISO 14971 is commonly used for medical device risk management processes.",
+      "placeholder": true
+    },
+    {
+      "id": "rac-placeholder-015",
+      "type": "multiple",
+      "domain": "Quality Systems",
+      "tags": ["supplier controls", "purchasing"],
+      "difficulty": "medium",
+      "prompt": "PLACEHOLDER: Which activities can be part of supplier control?",
+      "options": [
+        { "id": "A", "text": "Supplier evaluation and selection" },
+        { "id": "B", "text": "Defining purchasing requirements" },
+        { "id": "C", "text": "Monitoring supplier performance" },
+        { "id": "D", "text": "Choosing a coffee brand for the office" }
+      ],
+      "correctOptionIds": ["A", "B", "C"],
+      "explanation": "PLACEHOLDER: Supplier controls can include qualification, purchasing requirements, and ongoing monitoring.",
+      "placeholder": true
+    },
+    {
+      "id": "rac-placeholder-016",
+      "type": "single",
+      "domain": "Regulatory Strategy",
+      "tags": ["De Novo", "classification"],
+      "difficulty": "hard",
+      "prompt": "PLACEHOLDER: Which pathway may be used for a novel low-to-moderate risk device without a suitable predicate?",
+      "options": [
+        { "id": "A", "text": "De Novo classification request" },
+        { "id": "B", "text": "PMA supplement only" },
+        { "id": "C", "text": "Annual registration only" },
+        { "id": "D", "text": "Complaint closure" }
+      ],
+      "correctOptionIds": ["A"],
+      "explanation": "PLACEHOLDER: De Novo can create a new classification for certain novel low-to-moderate risk devices.",
+      "placeholder": true
+    }
+  ]
+}

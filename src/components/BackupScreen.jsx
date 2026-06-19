@@ -1,15 +1,23 @@
 import { ArrowDownToLine, ArrowUpFromLine, Database, Trash2 } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { makeExportPayload, normalizeImport } from '../lib/storage'
+import {
+  loadImportedQuestions,
+  loadQuizProgress,
+  saveImportedQuestions,
+  saveQuizProgress,
+} from '../features/quiz/lib/storage'
 
 export default function BackupScreen({ days, onImport, onClear }) {
   const inputRef = useRef(null)
   const [message, setMessage] = useState('')
 
   function exportData() {
-    const blob = new Blob([JSON.stringify(makeExportPayload(days), null, 2)], {
-      type: 'application/json',
+    const payload = makeExportPayload(days, {
+      quizQuestions: loadImportedQuestions(),
+      quizProgress: loadQuizProgress(),
     })
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
     anchor.href = url
@@ -26,7 +34,9 @@ export default function BackupScreen({ days, onImport, onClear }) {
       const payload = normalizeImport(JSON.parse(await file.text()))
       if (!window.confirm(`导入将替换当前 ${days.length} 个 Day，继续吗？`)) return
       onImport(payload.days)
-      setMessage(`已恢复 ${payload.days.length} 个 Day。`)
+      saveImportedQuestions(payload.quizQuestions || [])
+      if (payload.quizProgress) saveQuizProgress(payload.quizProgress)
+      setMessage(`已恢复 ${payload.days.length} 个 Day，${(payload.quizQuestions || []).length} 道导入题。`)
     } catch (error) {
       setMessage(`导入失败：${error.message}`)
     } finally {

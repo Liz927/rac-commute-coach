@@ -87,6 +87,9 @@ function normalizeDay(day, index) {
     id,
     dayNumber: Number(day.dayNumber) || index + 1,
     title: day.title || '',
+    packId: day.packId || '',
+    domain: day.domain || '',
+    tags: Array.isArray(day.tags) ? day.tags : [],
     contentMarkdown: parsed.contentWithoutQuestions,
     completed: Boolean(day.completed),
     notes: day.notes || '',
@@ -119,6 +122,12 @@ export function normalizeImport(payload) {
     version: DATA_VERSION,
     exportedAt: payload.exportedAt || new Date().toISOString(),
     days: payload.days.map(normalizeDay),
+    quizQuestions: Array.isArray(payload.quizQuestions)
+      ? payload.quizQuestions
+      : Array.isArray(payload.quiz?.importedQuestions)
+        ? payload.quiz.importedQuestions
+        : [],
+    quizProgress: payload.quizProgress || payload.quiz?.progress || null,
   }
 }
 
@@ -139,10 +148,12 @@ export function saveDays(days) {
   )
 }
 
-export function makeExportPayload(days) {
+export function makeExportPayload(days, quizData = {}) {
   return {
     version: DATA_VERSION,
     exportedAt: new Date().toISOString(),
     days: days.map((day, index) => normalizeDay(day, index)),
+    quizQuestions: quizData.quizQuestions || [],
+    quizProgress: quizData.quizProgress || null,
   }
 }
