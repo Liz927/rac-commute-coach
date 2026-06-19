@@ -17,6 +17,14 @@ const QUICK_NOTE_TAGS = [
   { value: 'important', label: '重要' },
 ]
 
+function getSectionTone(label = '') {
+  const normalized = label.trim().toUpperCase()
+  if (normalized.startsWith('T')) return 'is-terms'
+  if (normalized.startsWith('R')) return 'is-review'
+  if (normalized.startsWith('S')) return 'is-study'
+  return 'is-general'
+}
+
 function SectionContent({ section, day, onUpdate }) {
   const sectionNote =
     (day.sectionNotes || []).find((note) => note.sectionId === section.id)?.note || ''
@@ -54,7 +62,7 @@ function SectionContent({ section, day, onUpdate }) {
 
   if (section.collapsible) {
     return (
-      <details className="term-section" open>
+      <details className="term-section visual-map-card is-terms" open>
         <summary>
           <span>{section.label}</span>
           {section.title}
@@ -65,7 +73,7 @@ function SectionContent({ section, day, onUpdate }) {
   }
 
   return (
-    <section className="reading-section">
+    <section className={`reading-section visual-map-card ${getSectionTone(section.label)}`}>
       <div className="reading-heading">
         <span>{section.label}</span>
         <h2>{section.title}</h2>
