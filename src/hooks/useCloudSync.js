@@ -2,13 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   applySyncPayload,
   createLocalSyncPayload,
-  fetchCloudPayload,
   getCloudDeviceId,
   mergeCloudPayloads,
   serializeError,
   startGoogleSignIn,
   startGoogleSignOut,
-  uploadCloudPayload,
+  syncCloudPayload,
   watchCloudPayload,
   watchGoogleAuth,
 } from '../lib/cloudSync'
@@ -44,11 +43,12 @@ export function useCloudSync(days, setDays) {
     setError('')
     setStatus('正在同步…')
     try {
-      await uploadCloudPayload(
+      const mergedPayload = await syncCloudPayload(
         currentUser.uid,
         createLocalSyncPayload(daysRef.current),
         deviceIdRef.current || getCloudDeviceId(),
       )
+      applyRemotePayload(mergedPayload)
       setStatus(`已同步 ${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`)
     } catch (syncError) {
       setError(serializeError(syncError))
@@ -77,13 +77,12 @@ export function useCloudSync(days, setDays) {
       deviceIdRef.current = getCloudDeviceId()
       setStatus('正在读取云端数据…')
       try {
-        const remotePayload = await fetchCloudPayload(nextUser.uid)
-        const localPayload = createLocalSyncPayload(daysRef.current)
-        const mergedPayload = remotePayload
-          ? mergeCloudPayloads(localPayload, remotePayload)
-          : localPayload
-        if (remotePayload) applyRemotePayload(mergedPayload)
-        await uploadCloudPayload(nextUser.uid, mergedPayload, deviceIdRef.current)
+        const mergedPayload = await syncCloudPayload(
+          nextUser.uid,
+          createLocalSyncPayload(daysRef.current),
+          deviceIdRef.current,
+        )
+        applyRemotePayload(mergedPayload)
         setStatus('已开启自动同步')
       } catch (syncError) {
         setError(serializeError(syncError))
@@ -100,7 +99,7 @@ export function useCloudSync(days, setDays) {
               remoteState.payload,
             )
             applyRemotePayload(mergedPayload)
-            await uploadCloudPayload(nextUser.uid, mergedPayload, deviceIdRef.current)
+            await syncCloudPayload(nextUser.uid, mergedPayload, deviceIdRef.current)
             setStatus('已从另一台设备同步')
           } catch (syncError) {
             setError(serializeError(syncError))

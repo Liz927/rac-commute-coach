@@ -1,5 +1,5 @@
 import { onAuthStateChanged, signInWithRedirect, signOut } from 'firebase/auth'
-import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore'
+import { doc, onSnapshot, runTransaction } from 'firebase/firestore'
 import { loadImportedQuestions, loadQuizProgress, saveImportedQuestions, saveQuizProgress } from '../features/quiz/lib/storage'
 import { firebaseAuth, firebaseDb, googleProvider } from './firebase'
 import { mergeSyncPayloads, toFirestoreSafe } from './cloudSyncData'
@@ -65,11 +65,6 @@ export function watchGoogleAuth(onUser, onError) {
   return onAuthStateChanged(firebaseAuth, onUser, onError)
 }
 
-export async function fetchCloudPayload(userId) {
-  const snapshot = await getDoc(syncDocument(userId))
-  return snapshot.exists() ? snapshot.data().payload || null : null
-}
-
 export function watchCloudPayload(userId, onPayload, onError) {
   return onSnapshot(
     syncDocument(userId),
@@ -78,12 +73,21 @@ export function watchCloudPayload(userId, onPayload, onError) {
   )
 }
 
-export async function uploadCloudPayload(userId, payload, deviceId) {
-  await setDoc(syncDocument(userId), {
-    schemaVersion: CLOUD_SCHEMA_VERSION,
-    updatedAt: new Date().toISOString(),
-    updatedBy: deviceId,
-    payload: toFirestoreSafe(payload),
+export async function syncCloudPayload(userId, localPayload, deviceId) {
+  return runTransaction(firebaseDb, async (transaction) => {
+    const reference = syncDocument(userId)
+    const snapshot = await transaction.get(reference)
+    const remotePayload = snapshot.exists() ? snapshot.data().payload || {} : {}
+    const mergedPayload = mergeSyncPayloads(localPayload, remotePayload)
+
+    transaction.set(reference, {
+      schemaVersion: CLOUD_SCHEMA_VERSION,
+      updatedAt: new Date().toISOString(),
+      updatedBy: deviceId,
+      payload: toFirestoreSafe(mergedPayload),
+    })
+
+    return mergedPayload
   })
 }
 
