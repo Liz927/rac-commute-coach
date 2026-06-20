@@ -4,19 +4,22 @@ import questionPackJson from '../features/quiz/data/questions.json'
 import { loadImportedQuestions } from '../features/quiz/lib/storage'
 import { getPackageQuestionPreview, parseLearningPackage } from '../lib/learningPackage'
 
-const starterText = `---RAC_DAY_PACKAGE_V1---
+const starterText = `RAC_DAY_PACKAGE_V2_START
+META_START
 day: 3
 title: RAC Day 3｜510(k)：Predicate 与 Substantial Equivalence
 packId: rac-device-day-003
 domain: Premarket
 tags: 510k,predicate,substantial-equivalence,intended-use
 difficulty: easy
----CONTENT---
+META_END
+CONTENT_START
 # RAC Day 3｜510(k)：Predicate 与 Substantial Equivalence
 
 ## S0｜今天的目标
 ...
----QUESTIONS_JSON---
+CONTENT_END
+QUESTIONS_JSON_START
 [
   {
     "id": "rac-d3-q001",
@@ -30,7 +33,8 @@ difficulty: easy
     "explanation": "Predicate device 是 510(k) 中用于证明 substantial equivalence 的 legally marketed device。"
   }
 ]
----END---`
+QUESTIONS_JSON_END
+RAC_DAY_PACKAGE_V2_END`
 
 function countCharacters(value) {
   return value.replace(/\s/g, '').length
@@ -121,7 +125,8 @@ export default function PackageImportScreen({
 
       <section className="package-import-panel">
         <label>
-          <span>粘贴完整 RAC_DAY_PACKAGE_V1 文本</span>
+          <span>粘贴完整 RAC_DAY_PACKAGE_V2 文本</span>
+          <small>推荐使用 V2 格式，避免手机复制时短横线丢失；旧 V1 仍可导入。</small>
           <textarea
             value={rawText}
             onChange={(event) => {

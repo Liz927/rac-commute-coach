@@ -14,7 +14,7 @@ export default function AddScreen({ onNewDay, onImportPackage }) {
           <ArrowUpFromLine size={24} />
           <span>
             <strong>导入学习包</strong>
-            <small>粘贴 RAC_DAY_PACKAGE_V1，自动创建 Day 和 Quiz 题库</small>
+            <small>推荐粘贴 RAC_DAY_PACKAGE_V2_START，避免手机复制时短横线丢失</small>
           </span>
         </button>
         <button type="button" onClick={onNewDay}>
