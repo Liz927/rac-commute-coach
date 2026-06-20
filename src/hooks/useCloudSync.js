@@ -134,7 +134,7 @@ export function useCloudSync(days, setDays) {
 
   const signIn = useCallback(async () => {
     setError('')
-    setStatus('正在跳转至 Google 登录…')
+    setStatus('正在打开 Google 登录…')
     try {
       await startGoogleSignIn()
     } catch (authError) {

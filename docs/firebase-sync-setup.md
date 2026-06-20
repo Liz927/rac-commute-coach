@@ -23,3 +23,5 @@ service cloud.firestore {
 ```
 
 The Firebase Web config is a public client identifier. Do not add a Firebase service-account JSON or any private key to this repository.
+
+The app uses Google popup sign-in instead of redirect sign-in because Safari blocks the cross-origin storage used by Firebase redirect flows on GitHub Pages.

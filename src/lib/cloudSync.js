@@ -1,4 +1,4 @@
-import { onAuthStateChanged, signInWithRedirect, signOut } from 'firebase/auth'
+import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth'
 import { doc, onSnapshot, runTransaction } from 'firebase/firestore'
 import { loadImportedQuestions, loadQuizProgress, saveImportedQuestions, saveQuizProgress } from '../features/quiz/lib/storage'
 import { firebaseAuth, firebaseDb, googleProvider } from './firebase'
@@ -54,7 +54,7 @@ function serializeError(error) {
 }
 
 export function startGoogleSignIn() {
-  return signInWithRedirect(firebaseAuth, googleProvider)
+  return signInWithPopup(firebaseAuth, googleProvider)
 }
 
 export function startGoogleSignOut() {
