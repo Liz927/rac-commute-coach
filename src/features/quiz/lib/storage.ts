@@ -1,4 +1,5 @@
 import type { Question, QuizProgress } from '../types'
+import { notifyLocalDataChanged } from '../../../lib/localChanges'
 
 export const QUIZ_PROGRESS_KEY = 'rac.quiz.progress.v1'
 export const QUIZ_QUESTION_BANK_KEY = 'rac.quiz.importedQuestions.v1'
@@ -38,6 +39,7 @@ export function saveQuizProgress(
   storage: QuizStorage = localStorage,
 ) {
   storage.setItem(QUIZ_PROGRESS_KEY, JSON.stringify(normalizeProgress(progress)))
+  notifyLocalDataChanged()
 }
 
 function normalizeQuestion(question: Partial<Question>, index: number): Question | null {
@@ -103,6 +105,7 @@ export function saveImportedQuestions(
   storage: QuizStorage = localStorage,
 ) {
   storage.setItem(QUIZ_QUESTION_BANK_KEY, JSON.stringify(normalizeImportedQuestions(questions)))
+  notifyLocalDataChanged()
 }
 
 export function mergeImportedQuestions(existing: Question[], incoming: Question[]) {

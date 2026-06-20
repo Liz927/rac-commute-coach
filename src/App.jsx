@@ -13,11 +13,13 @@ import {
 } from './features/quiz/lib/storage'
 import QuizScreen from './features/quiz/components/QuizScreen'
 import { useDays } from './hooks/useDays'
+import { useCloudSync } from './hooks/useCloudSync'
 import { createEmptyDay } from './lib/day'
 import { applyLearningPackageToDays } from './lib/learningPackageImport'
 
 export default function App() {
   const { days, setDays, saveDay, updateDay, deleteDay } = useDays()
+  const cloudSync = useCloudSync(days, setDays)
   const [view, setView] = useState({ name: 'days', dayId: null })
   const selectedDay = useMemo(
     () => days.find((day) => day.id === view.dayId),
@@ -112,7 +114,12 @@ export default function App() {
       {view.name === 'quiz' ? (
         <QuizScreen />
       ) : view.name === 'backup' ? (
-        <BackupScreen days={days} onImport={setDays} onClear={() => setDays([])} />
+        <BackupScreen
+          days={days}
+          onImport={setDays}
+          onClear={() => setDays([])}
+          cloudSync={cloudSync}
+        />
       ) : (
         <DayList
           days={days}

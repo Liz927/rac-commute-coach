@@ -5,6 +5,7 @@ import {
   getQuestionStem,
 } from './day'
 import { parseMarkdown } from './markdown'
+import { notifyLocalDataChanged } from './localChanges'
 
 export const STORAGE_KEY = 'rac-commute-coach-data'
 export const DATA_VERSION = 1
@@ -146,6 +147,7 @@ export function saveDays(days) {
     STORAGE_KEY,
     JSON.stringify({ version: DATA_VERSION, exportedAt: new Date().toISOString(), days }),
   )
+  notifyLocalDataChanged()
 }
 
 export function makeExportPayload(days, quizData = {}) {

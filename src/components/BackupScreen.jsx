@@ -1,4 +1,13 @@
-import { ArrowDownToLine, ArrowUpFromLine, Database, Trash2 } from 'lucide-react'
+import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  Cloud,
+  Database,
+  LogIn,
+  LogOut,
+  RefreshCw,
+  Trash2,
+} from 'lucide-react'
 import { useRef, useState } from 'react'
 import { makeExportPayload, normalizeImport } from '../lib/storage'
 import {
@@ -8,7 +17,7 @@ import {
   saveQuizProgress,
 } from '../features/quiz/lib/storage'
 
-export default function BackupScreen({ days, onImport, onClear }) {
+export default function BackupScreen({ days, onImport, onClear, cloudSync }) {
   const inputRef = useRef(null)
   const [message, setMessage] = useState('')
 
@@ -56,7 +65,7 @@ export default function BackupScreen({ days, onImport, onClear }) {
       <header className="page-title">
         <p className="eyebrow">LOCAL DATA</p>
         <h1>备份与恢复</h1>
-        <p>所有数据只保存在这台设备的浏览器中。建议定期导出。</p>
+        <p>本机始终保留一份数据；登录 Google 后可自动同步，仍建议定期导出 JSON。</p>
       </header>
 
       <section className="backup-card">
@@ -66,6 +75,37 @@ export default function BackupScreen({ days, onImport, onClear }) {
           <span>当前本地数据</span>
         </div>
       </section>
+
+      <section className="backup-card cloud-sync-card">
+        <Cloud size={30} />
+        <div>
+          <strong>Google 云同步（试验）</strong>
+          <span>{cloudSync.user ? cloudSync.user.email : '登录后同步手机与电脑的数据'}</span>
+          <small>{cloudSync.status}</small>
+        </div>
+      </section>
+
+      <section className="backup-actions cloud-sync-actions">
+        {cloudSync.user ? (
+          <>
+            <button type="button" onClick={cloudSync.syncNow}>
+              <RefreshCw />
+              <span><strong>立即同步</strong><small>将当前本地数据合并并上传</small></span>
+            </button>
+            <button type="button" onClick={cloudSync.signOut}>
+              <LogOut />
+              <span><strong>退出 Google</strong><small>保留本机数据，停止自动同步</small></span>
+            </button>
+          </>
+        ) : (
+          <button type="button" onClick={cloudSync.signIn}>
+            <LogIn />
+            <span><strong>使用 Google 登录</strong><small>登录后自动同步这台设备的数据</small></span>
+          </button>
+        )}
+      </section>
+
+      {cloudSync.error && <p className="status-message error" role="alert">{cloudSync.error}</p>}
 
       <section className="backup-actions">
         <button type="button" onClick={exportData}>
