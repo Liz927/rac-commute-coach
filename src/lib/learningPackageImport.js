@@ -28,6 +28,7 @@ export function applyLearningPackageToDays(days, parsedPackage, { mode = 'create
     packId: nextPackId,
     domain: parsedPackage.meta.domain || '',
     tags: parsedPackage.meta.tags || [],
+    difficulty: parsedPackage.meta.difficulty || '',
     contentMarkdown: sanitized.contentWithoutQuestions,
     sections: sanitized.sections,
     questions: [],

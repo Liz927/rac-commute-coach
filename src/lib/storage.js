@@ -72,6 +72,23 @@ function normalizeQuickNote(note, index) {
   }
 }
 
+function normalizeQuestionStates(states) {
+  if (!states || typeof states !== 'object' || Array.isArray(states)) return {}
+  return Object.fromEntries(
+    Object.entries(states).map(([questionId, state]) => [
+      questionId,
+      {
+        userAnswer: ['A', 'B', 'C', 'D'].includes(state?.userAnswer) ? state.userAnswer : undefined,
+        isUnsure: Boolean(state?.isUnsure),
+        showAnswer: Boolean(state?.showAnswer),
+        wantsToAsk: Boolean(state?.wantsToAsk),
+        isImportant: Boolean(state?.isImportant),
+        note: state?.note || '',
+      },
+    ]),
+  )
+}
+
 function normalizeDay(day, index) {
   const now = new Date().toISOString()
   const id = day.id || `imported-day-${index + 1}`
@@ -91,6 +108,7 @@ function normalizeDay(day, index) {
     packId: day.packId || '',
     domain: day.domain || '',
     tags: Array.isArray(day.tags) ? day.tags : [],
+    difficulty: day.difficulty || '',
     contentMarkdown: parsed.contentWithoutQuestions,
     completed: Boolean(day.completed),
     notes: day.notes || '',
@@ -106,6 +124,7 @@ function normalizeDay(day, index) {
     questionNotes: Array.isArray(day.questionNotes)
       ? day.questionNotes.map(normalizeQuestionNote)
       : [],
+    questionStates: normalizeQuestionStates(day.questionStates),
     quickNotes: Array.isArray(day.quickNotes)
       ? day.quickNotes.map(normalizeQuickNote).filter((note) => note.text.trim())
       : [],

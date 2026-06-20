@@ -15,6 +15,7 @@ import {
   loadQuizProgress,
   saveQuizProgress,
 } from '../lib/storage'
+import { LOCAL_DATA_CHANGED } from '../../../lib/localChanges'
 
 const questionPack = questionPackJson as QuestionPack
 const bundledQuestions = questionPack.questions as Question[]
@@ -28,12 +29,18 @@ function mergeQuestionSources(bundled: Question[], imported: Question[]) {
 
 export function useQuizStore() {
   const [progress, setProgress] = useState<QuizProgress>(() => loadQuizProgress())
-  const [importedQuestions] = useState<Question[]>(() => loadImportedQuestions())
+  const [importedQuestions, setImportedQuestions] = useState<Question[]>(() => loadImportedQuestions())
   const [filters, setFilters] = useState<QuizFilters>(EMPTY_FILTERS)
 
   useEffect(() => {
     saveQuizProgress(progress)
   }, [progress])
+
+  useEffect(() => {
+    const refreshImportedQuestions = () => setImportedQuestions(loadImportedQuestions())
+    window.addEventListener(LOCAL_DATA_CHANGED, refreshImportedQuestions)
+    return () => window.removeEventListener(LOCAL_DATA_CHANGED, refreshImportedQuestions)
+  }, [])
 
   const questions = useMemo(
     () => mergeQuestionSources(bundledQuestions, importedQuestions),

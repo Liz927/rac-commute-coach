@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { buildQuestionPackage } from '../lib/package'
 import { upsertQuickNote, upsertSectionNote } from '../lib/day'
+import { getLinkedDayQuestions } from '../lib/dayQuestions'
 import { parseMarkdown } from '../lib/markdown'
 import InlineNote from './InlineNote'
 import MarkButtons from './MarkButtons'
@@ -172,15 +173,18 @@ function QuickNotesList({ day, onUpdate }) {
   )
 }
 
-export default function DayReader({ day, onBack, onEdit, onUpdate }) {
+export default function DayReader({ day, allQuizQuestions = [], onBack, onEdit, onUpdate }) {
   const [activeTab, setActiveTab] = useState('reading')
   const [lookupOpen, setLookupOpen] = useState(false)
   const [lookupQuery, setLookupQuery] = useState('')
   const [showPackage, setShowPackage] = useState(false)
   const [copied, setCopied] = useState(false)
   const parsed = useMemo(() => parseMarkdown(day.contentMarkdown, day.id), [day])
-  const questions = day.questions || []
-  const effectiveDay = useMemo(
+  const questions = useMemo(
+    () => getLinkedDayQuestions(day, allQuizQuestions),
+    [day, allQuizQuestions],
+  )
+  const packageDay = useMemo(
     () => ({
       ...day,
       questions,
@@ -190,7 +194,7 @@ export default function DayReader({ day, onBack, onEdit, onUpdate }) {
   const sections = (day.contentMarkdown ? parsed.sections : day.sections || []).filter(
     (section) => !/^Q\d+$/i.test(section.label),
   )
-  const generatedPackageText = useMemo(() => buildQuestionPackage(effectiveDay), [effectiveDay])
+  const generatedPackageText = useMemo(() => buildQuestionPackage(packageDay), [packageDay])
   const [packageDraft, setPackageDraft] = useState(() => day.reviewDraft || generatedPackageText)
 
   useEffect(() => {
@@ -203,6 +207,14 @@ export default function DayReader({ day, onBack, onEdit, onUpdate }) {
   }, [day.id, parsed.questions.length, parsed.contentWithoutQuestions])
 
   useEffect(() => {
+    if (!import.meta.env.DEV) return
+    console.log('[Day Detail] day', day)
+    console.log('[Day Detail] day.packId', day.packId)
+    console.log('[Day Detail] allQuizQuestions count', allQuizQuestions.length)
+    console.log('[Day Detail] matched questions', questions.length)
+  }, [day, allQuizQuestions.length, questions.length])
+
+  useEffect(() => {
     setPackageDraft(day.reviewDraft || generatedPackageText)
   }, [day.id, day.reviewDraft])
 
@@ -213,7 +225,7 @@ export default function DayReader({ day, onBack, onEdit, onUpdate }) {
   }
 
   function updateEffectiveDay(nextDay) {
-    onUpdate({ ...nextDay, questions: nextDay.questions || [] })
+    onUpdate(nextDay)
   }
 
   function openPackage() {
@@ -227,18 +239,31 @@ export default function DayReader({ day, onBack, onEdit, onUpdate }) {
   }
 
   function savePackageDraft() {
-    onUpdate({ ...effectiveDay, reviewDraft: packageDraft })
+    onUpdate({ ...day, reviewDraft: packageDraft })
   }
 
   function saveFreeNotes(note) {
-    onUpdate({ ...effectiveDay, freeNotes: note })
+    onUpdate({ ...day, freeNotes: note })
   }
 
   function updateReaderDay(nextDay) {
-    onUpdate({ ...nextDay, questions: nextDay.questions || [] })
+    onUpdate(nextDay)
   }
 
-  const freeNoteCount = (effectiveDay.freeNotes || '')
+  function updateLinkedQuestionState(questionId, patch) {
+    onUpdate({
+      ...day,
+      questionStates: {
+        ...(day.questionStates || {}),
+        [questionId]: {
+          ...(day.questionStates || {})[questionId],
+          ...patch,
+        },
+      },
+    })
+  }
+
+  const freeNoteCount = (day.freeNotes || '')
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean).length
@@ -316,7 +341,7 @@ export default function DayReader({ day, onBack, onEdit, onUpdate }) {
                 <SectionContent
                   key={section.id}
                   section={section}
-                  day={effectiveDay}
+                  day={day}
                   onUpdate={updateEffectiveDay}
                 />
               ))
@@ -340,16 +365,16 @@ export default function DayReader({ day, onBack, onEdit, onUpdate }) {
                   placeholder={`controls 和 evidence 的区别还是有点混
 De Novo 和 PMA 的边界想再问
 这段和我 BRCA CE 经历可以怎么对应`}
-                  value={effectiveDay.freeNotes || ''}
+                  value={day.freeNotes || ''}
                   onSave={saveFreeNotes}
                   minRows={5}
                 />
                 <div className="quick-notes-panel">
                   <div className="quick-notes-panel-head">
                     <strong>随手疑问</strong>
-                    <span>{(effectiveDay.quickNotes || []).length} 条</span>
+                    <span>{(day.quickNotes || []).length} 条</span>
                   </div>
-                  <QuickNotesList day={effectiveDay} onUpdate={updateReaderDay} />
+                  <QuickNotesList day={day} onUpdate={updateReaderDay} />
                 </div>
               </details>
             </section>
@@ -375,14 +400,17 @@ De Novo 和 PMA 的边界想再问
               questions.map((question) => (
                 <QuestionCard
                   key={question.id}
-                  day={effectiveDay}
+                  day={day}
                   question={question}
                   onUpdate={updateEffectiveDay}
+                  onStateChange={day.packId ? updateLinkedQuestionState : undefined}
                 />
               ))
             ) : (
               <div className="empty-questions-panel">
-                今天还没有题目。可以在编辑页添加，或从 Markdown 自动迁移。
+                {day.packId
+                  ? `当前 Day 已关联 packId: ${day.packId}，但题库中没有找到该 packId 的题目。请检查导入是否写入 Quiz question bank。`
+                  : '当前 Day 没有 packId，无法关联题库。'}
               </div>
             )}
             </section>
@@ -415,7 +443,7 @@ De Novo 和 PMA 的边界想再问
           )}
         </article>
       </div>
-      <QuickNoteBar day={effectiveDay} onUpdate={updateReaderDay} />
+      <QuickNoteBar day={day} onUpdate={updateReaderDay} />
     </main>
   )
 }

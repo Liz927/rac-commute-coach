@@ -5,7 +5,15 @@ describe('normalizeImport', () => {
   it('accepts an exported payload and fills optional arrays', () => {
     const result = normalizeImport({
       version: 1,
-      days: [{ id: 'd1', dayNumber: 1, title: 'Intro', contentMarkdown: '# Intro' }],
+      days: [{
+        id: 'd1',
+        dayNumber: 1,
+        title: 'Intro',
+        packId: 'rac-device-day-001',
+        difficulty: 'easy',
+        questionStates: { 'rac-d1-q001': { userAnswer: 'B', showAnswer: true } },
+        contentMarkdown: '# Intro',
+      }],
     })
 
     expect(result.days[0]).toMatchObject({
@@ -22,6 +30,11 @@ describe('normalizeImport', () => {
       questionNotes: [],
       quickNotes: [],
       completed: false,
+      packId: 'rac-device-day-001',
+      difficulty: 'easy',
+      questionStates: {
+        'rac-d1-q001': expect.objectContaining({ userAnswer: 'B', showAnswer: true }),
+      },
     })
     expect(result.days[0]).not.toHaveProperty('audioScripts')
     expect(result.days[0]).not.toHaveProperty('audioFiles')

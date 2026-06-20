@@ -20,6 +20,7 @@ import { applyLearningPackageToDays } from './lib/learningPackageImport'
 export default function App() {
   const { days, setDays, saveDay, updateDay, deleteDay } = useDays()
   const cloudSync = useCloudSync(days, setDays)
+  const allQuizQuestions = useMemo(() => loadImportedQuestions(), [days])
   const [view, setView] = useState({ name: 'days', dayId: null })
   const selectedDay = useMemo(
     () => days.find((day) => day.id === view.dayId),
@@ -42,11 +43,26 @@ export default function App() {
   }
 
   function importLearningPackage(parsedPackage, { mode }) {
+    if (import.meta.env.DEV && parsedPackage.version === 'RAC_DAY_PACKAGE_V2') {
+      console.log('[Import V2] meta', parsedPackage.meta)
+      console.log('[Import V2] parsed questions', parsedPackage.questions.length)
+      console.log('[Import V2] normalized questions', parsedPackage.questions)
+    }
     const dayImport = applyLearningPackageToDays(days, parsedPackage, { mode })
     setDays(dayImport.days)
 
     const mergedQuestions = mergeImportedQuestions(loadImportedQuestions(), parsedPackage.questions)
     saveImportedQuestions(mergedQuestions.questions)
+    const totalQuestionsForPack = mergedQuestions.questions.filter(
+      (question) => question.packId === parsedPackage.meta.packId,
+    ).length
+    if (import.meta.env.DEV && parsedPackage.version === 'RAC_DAY_PACKAGE_V2') {
+      console.log(
+        '[Import V2] saved questions for packId',
+        parsedPackage.meta.packId,
+        totalQuestionsForPack,
+      )
+    }
 
     return {
       dayId: dayImport.day.id,
@@ -54,6 +70,9 @@ export default function App() {
       dayAction: dayImport.dayAction,
       addedQuestions: mergedQuestions.added,
       updatedQuestions: mergedQuestions.updated,
+      packId: parsedPackage.meta.packId,
+      parsedQuestions: parsedPackage.questions.length,
+      totalQuestionsForPack,
     }
   }
 
@@ -61,6 +80,7 @@ export default function App() {
     return (
       <DayReader
         day={selectedDay}
+        allQuizQuestions={allQuizQuestions}
         onBack={() => setView({ name: 'days', dayId: null })}
         onEdit={() => setView({ name: 'editor', dayId: selectedDay.id })}
         onUpdate={(nextDay) => updateDay(nextDay.id, () => nextDay)}

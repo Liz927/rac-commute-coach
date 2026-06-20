@@ -10,7 +10,7 @@ import {
 import InlineNote from './InlineNote'
 import MarkButtons from './MarkButtons'
 
-export default function QuestionCard({ day, question, onUpdate }) {
+export default function QuestionCard({ day, question, onUpdate, onStateChange }) {
   const label = getQuestionLabel(question)
   const stem = getQuestionStem(question)
   const answer = getQuestionAnswer(question)
@@ -23,6 +23,10 @@ export default function QuestionCard({ day, question, onUpdate }) {
     ''
 
   function updateQuestion(patch) {
+    if (onStateChange) {
+      onStateChange(question.id, patch)
+      return
+    }
     onUpdate({
       ...day,
       questions: day.questions.map((item) =>

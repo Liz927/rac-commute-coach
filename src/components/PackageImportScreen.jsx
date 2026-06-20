@@ -191,6 +191,12 @@ export default function PackageImportScreen({
             已{result.dayAction === 'updated' ? '更新' : '创建'} Day。新增题目 {result.addedQuestions} 道，
             更新题目 {result.updatedQuestions} 道。
           </p>
+          <p>
+            packId: {result.packId}。解析题目 {result.parsedQuestions} 道，当前包内共 {result.totalQuestionsForPack} 道。
+          </p>
+          {result.parsedQuestions > 0 && result.totalQuestionsForPack === 0 && (
+            <p className="status-message error">题目解析成功，但没有保存到该 packId。请重新导入。</p>
+          )}
           <div className="package-import-actions">
             <button type="button" onClick={() => onOpenDay(result.dayId)}>
               <PlayCircle size={18} /> 去阅读
