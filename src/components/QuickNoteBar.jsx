@@ -1,6 +1,7 @@
 import { MessageCircleQuestion, Pencil, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createQuickNote, upsertQuickNote } from '../lib/day'
+import { createDeferredDraftWriter } from '../lib/deferredDraft'
 
 const TAGS = [
   { value: 'general', label: '备注' },
@@ -25,13 +26,65 @@ export default function QuickNoteBar({ day, onUpdate }) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingId, setEditingId] = useState('')
   const [message, setMessage] = useState('')
-  const draft = day.quickDraft || ''
+  const [draft, setDraft] = useState(day.quickDraft || '')
+  const dayRef = useRef(day)
+  const onUpdateRef = useRef(onUpdate)
+  const draftRef = useRef(day.quickDraft || '')
+  const isComposingRef = useRef(false)
+  const writerRef = useRef(null)
   const quickNotes = day.quickNotes || []
   const canAdd = Boolean(draft.trim())
 
-  function updateDraft(value) {
+  if (!writerRef.current) {
+    writerRef.current = createDeferredDraftWriter((value) => {
+      const currentDay = dayRef.current
+      if ((currentDay.quickDraft || '') === value) return
+      onUpdateRef.current({ ...currentDay, quickDraft: value })
+    })
+  }
+
+  useEffect(() => {
+    dayRef.current = day
+    onUpdateRef.current = onUpdate
+    const savedDraft = day.quickDraft || ''
+    if (!isComposingRef.current && savedDraft !== draftRef.current) {
+      draftRef.current = savedDraft
+      setDraft(savedDraft)
+    }
+  }, [day, onUpdate])
+
+  useEffect(() => () => writerRef.current?.cancel(), [])
+
+  function setLocalDraft(value) {
+    draftRef.current = value
+    setDraft(value)
+  }
+
+  function updateDraft(value, { flush = false } = {}) {
     setExpanded(true)
-    onUpdate({ ...day, quickDraft: value })
+    setLocalDraft(value)
+    if (flush) writerRef.current.flush(value)
+    else writerRef.current.schedule(value)
+  }
+
+  function handleDraftChange(event) {
+    const value = event.currentTarget.value
+    setLocalDraft(value)
+    if (!isComposingRef.current) writerRef.current.schedule(value)
+  }
+
+  function handleCompositionStart() {
+    isComposingRef.current = true
+    writerRef.current.cancel()
+  }
+
+  function handleCompositionEnd(event) {
+    isComposingRef.current = false
+    updateDraft(event.currentTarget.value, { flush: true })
+  }
+
+  function handleBlur() {
+    if (!isComposingRef.current) writerRef.current.flush(draftRef.current)
   }
 
   function updateNote(note, patch) {
@@ -50,11 +103,14 @@ export default function QuickNoteBar({ day, onUpdate }) {
 
   function addNote() {
     if (!canAdd) return
+    writerRef.current.cancel()
+    const currentDay = dayRef.current
     onUpdate({
-      ...day,
+      ...currentDay,
       quickDraft: '',
-      quickNotes: [...quickNotes, createQuickNote(draft)],
+      quickNotes: [...(currentDay.quickNotes || []), createQuickNote(draft)],
     })
+    setLocalDraft('')
     setExpanded(false)
     setDrawerOpen(true)
     setMessage('已加入问题包')
@@ -133,7 +189,10 @@ export default function QuickNoteBar({ day, onUpdate }) {
           value={draft}
           onClick={() => setExpanded(true)}
           onFocus={() => setExpanded(true)}
-          onChange={(event) => updateDraft(event.target.value)}
+          onChange={handleDraftChange}
+          onCompositionStart={handleCompositionStart}
+          onCompositionEnd={handleCompositionEnd}
+          onBlur={handleBlur}
           placeholder="随手记一个疑问…"
         />
         {expanded && (
@@ -146,7 +205,7 @@ export default function QuickNoteBar({ day, onUpdate }) {
         </button>
       </div>
       {expanded && draft && (
-        <button className="quick-note-clear" type="button" onClick={() => updateDraft('')}>
+        <button className="quick-note-clear" type="button" onClick={() => updateDraft('', { flush: true })}>
           清空
         </button>
       )}

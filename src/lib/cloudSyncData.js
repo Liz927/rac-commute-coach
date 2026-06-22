@@ -12,6 +12,12 @@ function mergeById(localItems = [], remoteItems = [], chooseItem) {
   return Array.from(merged.values())
 }
 
+function mergeDeletedDays(localDeletedDays = [], remoteDeletedDays = []) {
+  return mergeById(localDeletedDays, remoteDeletedDays, (localItem, remoteItem) =>
+    timestamp(localItem.deletedAt) >= timestamp(remoteItem.deletedAt) ? localItem : remoteItem,
+  )
+}
+
 function attemptKey(attempt) {
   return [
     attempt.questionId,
@@ -38,9 +44,11 @@ export function toFirestoreSafe(value) {
 }
 
 export function mergeSyncPayloads(localPayload = {}, remotePayload = {}) {
+  const deletedDays = mergeDeletedDays(localPayload.deletedDays, remotePayload.deletedDays)
+  const deletedDayIds = new Set(deletedDays.map((item) => item.id))
   const days = mergeById(localPayload.days, remotePayload.days, (localDay, remoteDay) =>
     timestamp(localDay.updatedAt) >= timestamp(remoteDay.updatedAt) ? localDay : remoteDay,
-  )
+  ).filter((day) => !deletedDayIds.has(day.id))
   const quizQuestions = mergeById(
     localPayload.quizQuestions,
     remotePayload.quizQuestions,
@@ -61,6 +69,7 @@ export function mergeSyncPayloads(localPayload = {}, remotePayload = {}) {
   return {
     version: 1,
     days,
+    deletedDays,
     quizQuestions,
     quizProgress: { attempts, starredQuestionIds },
   }

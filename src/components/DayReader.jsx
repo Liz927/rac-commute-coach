@@ -1,10 +1,10 @@
-import { ArrowLeft, Check, Clipboard, Edit3, ListTree, Search } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { ArrowLeft, ArrowRight, ArrowUp, Check, Clipboard, Edit3, ListTree, Search } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { buildQuestionPackage } from '../lib/package'
 import { upsertQuickNote, upsertSectionNote } from '../lib/day'
-import { getLinkedDayQuestions } from '../lib/dayQuestions'
+import { getDayQuizAction, getLinkedDayQuestions } from '../lib/dayQuestions'
 import { parseMarkdown } from '../lib/markdown'
 import InlineNote from './InlineNote'
 import MarkButtons from './MarkButtons'
@@ -179,9 +179,14 @@ export default function DayReader({ day, allQuizQuestions = [], onBack, onEdit, 
   const [lookupQuery, setLookupQuery] = useState('')
   const [showPackage, setShowPackage] = useState(false)
   const [copied, setCopied] = useState(false)
+  const readerScrollRef = useRef(null)
   const parsed = useMemo(() => parseMarkdown(day.contentMarkdown, day.id), [day])
   const questions = useMemo(
     () => getLinkedDayQuestions(day, allQuizQuestions),
+    [day, allQuizQuestions],
+  )
+  const quizAction = useMemo(
+    () => getDayQuizAction(day, allQuizQuestions),
     [day, allQuizQuestions],
   )
   const packageDay = useMemo(
@@ -275,8 +280,22 @@ export default function DayReader({ day, allQuizQuestions = [], onBack, onEdit, 
     }, 80)
   }
 
+  function scrollToTop() {
+    const scrollContainer = readerScrollRef.current || document.querySelector('.scroll-container')
+    if (scrollContainer) {
+      scrollContainer.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function startDayQuiz() {
+    if (!quizAction.enabled) return
+    setActiveTab('questions')
+  }
+
   return (
-    <main className="reader-screen">
+    <main className="reader-screen scroll-container" ref={readerScrollRef}>
       <header className="reader-header">
         <button className="icon-button" type="button" onClick={onBack} aria-label="返回">
           <ArrowLeft />
@@ -386,6 +405,38 @@ De Novo 和 PMA 的边界想再问
               <button className="primary-button" type="button" onClick={openPackage}>
                 生成今日问题包
               </button>
+            </section>
+
+            <section className="reading-finish-actions" aria-label="阅读完成后的操作">
+              <p>已读到本页末尾</p>
+              <div>
+                <button type="button" onClick={scrollToTop}>
+                  <ArrowUp size={18} /> 回到顶部
+                </button>
+                <button
+                  className="start-day-quiz"
+                  type="button"
+                  onClick={startDayQuiz}
+                  disabled={!quizAction.enabled}
+                  title={
+                    quizAction.reason === 'missing-pack'
+                      ? '当前 Day 没有 packId，无法进入对应题目。'
+                      : quizAction.reason === 'no-questions'
+                        ? `已关联 packId: ${day.packId}，但题库中未找到题目。`
+                        : ''
+                  }
+                >
+                  开始默想题{quizAction.enabled ? `（${quizAction.questionCount}题）` : ''}
+                  <ArrowRight size={18} />
+                </button>
+              </div>
+              {!quizAction.enabled && (
+                <small>
+                  {quizAction.reason === 'missing-pack'
+                    ? '当前 Day 没有 packId，无法进入对应题目。'
+                    : '当前 Day 暂无题目，请检查导入是否已写入 Quiz question bank。'}
+                </small>
+              )}
             </section>
             </>
           )}

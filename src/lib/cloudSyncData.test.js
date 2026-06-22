@@ -63,6 +63,26 @@ describe('mergeSyncPayloads', () => {
     expect(merged.quizProgress.starredQuestionIds.sort()).toEqual(['q-1', 'q-2'])
   })
 
+  it('keeps deleted Day tombstones so an older cloud copy cannot reappear', () => {
+    const merged = mergeSyncPayloads(
+      {
+        days: [{ id: 'day-keep', title: 'Keep me' }],
+        deletedDays: [{ id: 'day-duplicate', deletedAt: '2026-06-22T12:00:00.000Z' }],
+      },
+      {
+        days: [
+          { id: 'day-keep', title: 'Keep me remotely' },
+          { id: 'day-duplicate', title: 'Duplicate Day 4' },
+        ],
+      },
+    )
+
+    expect(merged.days.map((day) => day.id)).toEqual(['day-keep'])
+    expect(merged.deletedDays).toEqual([
+      { id: 'day-duplicate', deletedAt: '2026-06-22T12:00:00.000Z' },
+    ])
+  })
+
   it('removes undefined values before a payload is sent to Firestore', () => {
     expect(toFirestoreSafe({
       title: 'Day 1',

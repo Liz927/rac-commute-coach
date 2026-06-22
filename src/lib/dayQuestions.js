@@ -25,3 +25,16 @@ export function getLinkedDayQuestions(day, allQuizQuestions = []) {
       ...(states[question.id] || {}),
     }))
 }
+
+export function getDayQuizAction(day, allQuizQuestions = []) {
+  if (!day.packId) {
+    return { enabled: false, questionCount: 0, reason: 'missing-pack' }
+  }
+
+  const questionCount = allQuizQuestions.filter((question) => question.packId === day.packId).length
+  return {
+    enabled: questionCount > 0,
+    questionCount,
+    reason: questionCount ? '' : 'no-questions',
+  }
+}

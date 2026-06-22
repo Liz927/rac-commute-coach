@@ -148,6 +148,7 @@ export function normalizeImport(payload) {
         ? payload.quiz.importedQuestions
         : [],
     quizProgress: payload.quizProgress || payload.quiz?.progress || null,
+    deletedDays: Array.isArray(payload.deletedDays) ? payload.deletedDays : [],
   }
 }
 
@@ -176,5 +177,6 @@ export function makeExportPayload(days, quizData = {}) {
     days: days.map((day, index) => normalizeDay(day, index)),
     quizQuestions: quizData.quizQuestions || [],
     quizProgress: quizData.quizProgress || null,
+    deletedDays: quizData.deletedDays || [],
   }
 }

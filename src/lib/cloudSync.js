@@ -3,6 +3,7 @@ import { doc, onSnapshot, runTransaction } from 'firebase/firestore'
 import { loadImportedQuestions, loadQuizProgress, saveImportedQuestions, saveQuizProgress } from '../features/quiz/lib/storage'
 import { firebaseAuth, firebaseDb, googleProvider } from './firebase'
 import { mergeSyncPayloads, toFirestoreSafe } from './cloudSyncData'
+import { loadDeletedDays, saveDeletedDays } from './dayDeletions'
 import { makeExportPayload, normalizeImport } from './storage'
 
 const CLOUD_DOCUMENT = 'state'
@@ -26,12 +27,14 @@ export function createLocalSyncPayload(days) {
   return makeExportPayload(days, {
     quizQuestions: loadImportedQuestions(),
     quizProgress: loadQuizProgress(),
+    deletedDays: loadDeletedDays(),
   })
 }
 
 export function applySyncPayload(payload, setDays) {
   const normalized = normalizeImport(payload)
   setDays(normalized.days)
+  saveDeletedDays(normalized.deletedDays || [])
   saveImportedQuestions(normalized.quizQuestions || [])
   saveQuizProgress(normalized.quizProgress || { attempts: [], starredQuestionIds: [] })
 }

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { makeExportPayload, normalizeImport } from '../lib/storage'
+import { loadDeletedDays } from '../lib/dayDeletions'
 import {
   loadImportedQuestions,
   loadQuizProgress,
@@ -25,6 +26,7 @@ export default function BackupScreen({ days, onImport, onClear, cloudSync }) {
     const payload = makeExportPayload(days, {
       quizQuestions: loadImportedQuestions(),
       quizProgress: loadQuizProgress(),
+      deletedDays: loadDeletedDays(),
     })
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
@@ -42,7 +44,7 @@ export default function BackupScreen({ days, onImport, onClear, cloudSync }) {
     try {
       const payload = normalizeImport(JSON.parse(await file.text()))
       if (!window.confirm(`导入将替换当前 ${days.length} 个 Day，继续吗？`)) return
-      onImport(payload.days)
+      onImport(payload.days, payload.deletedDays)
       saveImportedQuestions(payload.quizQuestions || [])
       if (payload.quizProgress) saveQuizProgress(payload.quizProgress)
       setMessage(`已恢复 ${payload.days.length} 个 Day，${(payload.quizQuestions || []).length} 道导入题。`)

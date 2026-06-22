@@ -18,7 +18,7 @@ import { createEmptyDay } from './lib/day'
 import { applyLearningPackageToDays } from './lib/learningPackageImport'
 
 export default function App() {
-  const { days, setDays, saveDay, updateDay, deleteDay } = useDays()
+  const { days, setDays, saveDay, updateDay, deleteDay, clearDays, replaceDays } = useDays()
   const cloudSync = useCloudSync(days, setDays)
   const allQuizQuestions = useMemo(() => loadImportedQuestions(), [days])
   const [view, setView] = useState({ name: 'days', dayId: null })
@@ -136,8 +136,8 @@ export default function App() {
       ) : view.name === 'backup' ? (
         <BackupScreen
           days={days}
-          onImport={setDays}
-          onClear={() => setDays([])}
+          onImport={replaceDays}
+          onClear={clearDays}
           cloudSync={cloudSync}
         />
       ) : (

@@ -1,10 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import {
+  clearDeletedDayTombstones,
+  markDayDeleted,
+  markDaysDeleted,
+  saveDeletedDays,
+} from '../lib/dayDeletions'
 import { loadDays, saveDays } from '../lib/storage'
 
 export function useDays() {
   const [days, setDays] = useState(loadDays)
+  const daysRef = useRef(days)
 
   useEffect(() => {
+    daysRef.current = days
     saveDays(days)
   }, [days])
 
@@ -29,8 +37,20 @@ export function useDays() {
   }
 
   function deleteDay(id) {
+    markDayDeleted(id)
     setDays((current) => current.filter((day) => day.id !== id))
   }
 
-  return { days, setDays, saveDay, updateDay, deleteDay }
+  function clearDays() {
+    markDaysDeleted(daysRef.current.map((day) => day.id))
+    setDays([])
+  }
+
+  function replaceDays(nextDays, deletedDays) {
+    if (Array.isArray(deletedDays)) saveDeletedDays(deletedDays)
+    else clearDeletedDayTombstones(nextDays.map((day) => day.id))
+    setDays(nextDays)
+  }
+
+  return { days, setDays, saveDay, updateDay, deleteDay, clearDays, replaceDays }
 }
