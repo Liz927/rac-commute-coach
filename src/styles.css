@@ -2664,6 +2664,21 @@ summary:focus-visible {
   text-align: center;
 }
 
+.import-success {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.import-repeat-hint {
+  margin-top: 10px !important;
+  font-size: 0.86rem;
+}
+
 @media (min-width: 760px) {
   body {
     background:

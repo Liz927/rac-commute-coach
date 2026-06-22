@@ -1,6 +1,11 @@
 import { createEmptyDay } from './day'
 import { parseMarkdown } from './markdown'
 
+export function formatImportSuccess({ dayAction, dayTitle, totalQuestionsForPack }) {
+  const action = dayAction === 'updated' ? '已更新' : '已创建'
+  return `导入成功：${action}「${dayTitle}」，共 ${totalQuestionsForPack} 道题。`
+}
+
 export function findPackageDay(days, parsedPackage) {
   return days.find(
     (day) =>

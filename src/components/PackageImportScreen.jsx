@@ -1,8 +1,9 @@
-import { ArrowLeft, ClipboardCheck, Eraser, Eye, PlayCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ClipboardCheck, Eraser, Eye, PlayCircle } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import questionPackJson from '../features/quiz/data/questions.json'
 import { loadImportedQuestions } from '../features/quiz/lib/storage'
 import { getPackageQuestionPreview, parseLearningPackage } from '../lib/learningPackage'
+import { formatImportSuccess } from '../lib/learningPackageImport'
 
 const starterText = `RAC_DAY_PACKAGE_V2_START
 META_START
@@ -91,7 +92,7 @@ export default function PackageImportScreen({
   }
 
   function confirmImport() {
-    if (!preview) return
+    if (!preview || result) return
     const mode = preview.existingDay
       ? window.confirm(
         `已发现已有 Day：${preview.existingDay.title}\n\n选择“确定”更新已有 Day；选择“取消”创建副本。`,
@@ -142,8 +143,9 @@ export default function PackageImportScreen({
           <button type="button" onClick={parsePreview} disabled={!rawText.trim()}>
             <Eye size={18} /> 解析预览
           </button>
-          <button type="button" onClick={confirmImport} disabled={!preview}>
-            <ClipboardCheck size={18} /> 确认导入
+          <button type="button" onClick={confirmImport} disabled={!preview || Boolean(result)}>
+            {result ? <CheckCircle2 size={18} /> : <ClipboardCheck size={18} />}
+            {result ? '已导入' : '确认导入'}
           </button>
           <button type="button" onClick={clearAll}>
             <Eraser size={18} /> 清空
@@ -187,6 +189,9 @@ export default function PackageImportScreen({
         <section className="import-result-card">
           <p className="eyebrow">IMPORTED</p>
           <h2>{result.dayTitle}</h2>
+          <p className="status-message import-success" role="status">
+            <CheckCircle2 size={18} /> {formatImportSuccess(result)}
+          </p>
           <p>
             已{result.dayAction === 'updated' ? '更新' : '创建'} Day。新增题目 {result.addedQuestions} 道，
             更新题目 {result.updatedQuestions} 道。
@@ -194,6 +199,7 @@ export default function PackageImportScreen({
           <p>
             packId: {result.packId}。解析题目 {result.parsedQuestions} 道，当前包内共 {result.totalQuestionsForPack} 道。
           </p>
+          <p className="import-repeat-hint">要重新导入这份学习包，请先点“解析预览”。</p>
           {result.parsedQuestions > 0 && result.totalQuestionsForPack === 0 && (
             <p className="status-message error">题目解析成功，但没有保存到该 packId。请重新导入。</p>
           )}

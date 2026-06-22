@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseLearningPackage } from './learningPackage'
-import { applyLearningPackageToDays } from './learningPackageImport'
+import { applyLearningPackageToDays, formatImportSuccess } from './learningPackageImport'
 
 function makeParsedPackage(packId = 'rac-device-day-010') {
   return parseLearningPackage(`---RAC_DAY_PACKAGE_V1---
@@ -32,6 +32,20 @@ Explanation: 兜底隐藏。
 }
 
 describe('applyLearningPackageToDays', () => {
+  it('formats a clear success message with the imported Day and question count', () => {
+    expect(formatImportSuccess({
+      dayAction: 'created',
+      dayTitle: 'RAC Day 4｜510(k)',
+      totalQuestionsForPack: 10,
+    })).toBe('导入成功：已创建「RAC Day 4｜510(k)」，共 10 道题。')
+
+    expect(formatImportSuccess({
+      dayAction: 'updated',
+      dayTitle: 'RAC Day 4｜510(k)',
+      totalQuestionsForPack: 10,
+    })).toContain('已更新')
+  })
+
   it('creates a Day with package metadata and sanitized reading content', () => {
     const parsed = makeParsedPackage()
     const result = applyLearningPackageToDays([], parsed, {
