@@ -131,20 +131,25 @@ function normalizeType(type, correctOptionIds) {
   return correctOptionIds.length > 1 ? 'multiple' : 'single'
 }
 
-function assertNoCurlyQuotesInV2QuestionsJson(questionsRaw) {
-  const index = questionsRaw.search(/[“”]/)
-  if (index < 0) return
+export function normalizeJsonText(raw = '') {
+  return String(raw)
+    .replace(/[\u201C\u201D\u201E\u201F\uFF02]/g, '"')
+    .replace(/\uFEFF/g, '')
+    .trim()
+}
 
-  const character = questionsRaw[index]
-  const previewStart = Math.max(0, index - 24)
-  const previewEnd = Math.min(questionsRaw.length, index + 25)
-  const preview = questionsRaw
-    .slice(previewStart, previewEnd)
+function hasSmartJsonQuotes(raw = '') {
+  return /[\u201C\u201D\u201E\u201F\uFF02]/.test(raw)
+}
+
+function formatJsonParseError(error, jsonText) {
+  const positionMatch = String(error?.message || '').match(/position\s+(\d+)/i)
+  const position = positionMatch ? Number(positionMatch[1]) : 0
+  const previewStart = Math.max(0, position - 24)
+  const preview = jsonText
+    .slice(previewStart, Math.min(jsonText.length, position + 25))
     .replace(/\n/g, '\\n')
-
-  throw new Error(
-    `QUESTIONS_JSON 包含中文弯引号 ${character}（第 ${index + 1} 个字符）。附近片段：${preview}。请使用英文半角双引号 " 作为 JSON 的字段名和字符串边界。`,
-  )
+  return `QUESTIONS_JSON 不是合法 JSON：${error.message}。附近片段：${preview}`
 }
 
 function normalizeOptions(question, questionId) {
@@ -225,14 +230,15 @@ function parsePackageBlocks({ version, metaRaw, contentMarkdown, questionsRaw })
     difficulty: normalizeDifficulty(rawMeta.difficulty?.trim()),
   }
 
+  const questionsJsonNormalized = version === 'RAC_DAY_PACKAGE_V2' && hasSmartJsonQuotes(questionsRaw)
+  const normalizedQuestionsRaw = version === 'RAC_DAY_PACKAGE_V2'
+    ? normalizeJsonText(questionsRaw)
+    : questionsRaw
   let parsedQuestions
   try {
-    if (version === 'RAC_DAY_PACKAGE_V2') {
-      assertNoCurlyQuotesInV2QuestionsJson(questionsRaw)
-    }
-    parsedQuestions = JSON.parse(questionsRaw)
+    parsedQuestions = JSON.parse(normalizedQuestionsRaw)
   } catch (error) {
-    throw new Error(`QUESTIONS_JSON 不是合法 JSON：${error.message}`)
+    throw new Error(formatJsonParseError(error, normalizedQuestionsRaw))
   }
 
   if (!Array.isArray(parsedQuestions)) {
@@ -259,6 +265,7 @@ function parsePackageBlocks({ version, metaRaw, contentMarkdown, questionsRaw })
     contentMarkdown,
     sanitizedContentMarkdown: parseMarkdown(contentMarkdown, packId).contentWithoutQuestions,
     questions,
+    questionsJsonNormalized,
   }
 }
 

@@ -217,26 +217,48 @@ RAC_DAY_PACKAGE_V2_END
     expect(result.questions[0].id).toBe('rac-d11-q001')
   })
 
-  it('rejects Chinese curly quotes in the V2 questions JSON with a local preview', () => {
+  it('normalizes smart quotes only inside the V2 questions JSON', () => {
     const packageText = `
 RAC_DAY_PACKAGE_V2_START
 META_START
-title: Curly quote check
+title: iOS quote check
 META_END
 CONTENT_START
-# Content
+# Content “must stay untouched”
 CONTENT_END
 QUESTIONS_JSON_START
 [
-  {“id”: "q1", "stem": "Question", "options": [{"key":"A","text":"A"},{"key":"B","text":"B"}], "answer": "A", "explanation": "Because."}
+  {“id”: “rac-d004-q001”, “type”: “single_choice”, “stem”: “测试题目”, “options”: [{“key”: “A”, “text”: “选项 A”},{“key”: “B”, “text”: “选项 B”},{“key”: “C”, “text”: “选项 C”},{“key”: “D”, “text”: “选项 D”}], “answer”: “B”, “explanation”: “测试解释”}
 ]
 QUESTIONS_JSON_END
 RAC_DAY_PACKAGE_V2_END
 `
 
-    expect(() => parseLearningPackage(packageText)).toThrow('QUESTIONS_JSON 包含中文弯引号 “')
-    expect(() => parseLearningPackage(packageText)).toThrow('附近片段')
-    expect(() => parseLearningPackage(packageText)).toThrow('英文半角双引号')
+    const result = parseLearningPackage(packageText)
+
+    expect(result.questionsJsonNormalized).toBe(true)
+    expect(result.questions[0]).toMatchObject({
+      id: 'rac-d004-q001',
+      prompt: '测试题目',
+      correctOptionIds: ['B'],
+    })
+    expect(result.contentMarkdown).toContain('“must stay untouched”')
+  })
+
+  it('reports the remaining JSON error with a nearby snippet after quote normalization', () => {
+    expect(() => parseLearningPackage(`
+RAC_DAY_PACKAGE_V2_START
+META_START
+title: Broken after normalize
+META_END
+CONTENT_START
+# Content
+CONTENT_END
+QUESTIONS_JSON_START
+[{“id”: “q1”,}]
+QUESTIONS_JSON_END
+RAC_DAY_PACKAGE_V2_END
+`)).toThrow('附近片段')
   })
 
   it('prefers a V2 package when V1 markers are also present', () => {

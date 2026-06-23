@@ -2679,6 +2679,11 @@ summary:focus-visible {
   font-size: 0.86rem;
 }
 
+.import-normalization-notice {
+  margin: 0 0 14px;
+  line-height: 1.5;
+}
+
 @media (min-width: 760px) {
   body {
     background:

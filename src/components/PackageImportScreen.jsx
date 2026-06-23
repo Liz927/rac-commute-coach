@@ -101,7 +101,7 @@ export default function PackageImportScreen({
         : 'copy'
       : 'create'
     const importResult = onImportPackage(preview.parsed, { mode })
-    setResult(importResult)
+    setResult({ ...importResult, questionsJsonNormalized: preview.parsed.questionsJsonNormalized })
     setPreview(buildPreview(preview.parsed))
   }
 
@@ -130,6 +130,10 @@ export default function PackageImportScreen({
           <small>推荐使用 V2 格式，避免手机复制时短横线丢失；旧 V1 仍可导入。</small>
           <textarea
             value={rawText}
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            inputMode="text"
             onChange={(event) => {
               setRawText(event.target.value)
               setPreview(null)
@@ -158,6 +162,11 @@ export default function PackageImportScreen({
         <section className="package-preview-card">
           <p className="eyebrow">PREVIEW</p>
           <h2>{preview.parsed.meta.title}</h2>
+          {preview.parsed.questionsJsonNormalized && (
+            <p className="status-message import-normalization-notice" role="status">
+              检测到中文弯引号，已自动转换为英文半角双引号后解析。
+            </p>
+          )}
           <dl>
             <div><dt>packId</dt><dd>{preview.parsed.meta.packId}</dd></div>
             <div><dt>domain</dt><dd>{preview.parsed.meta.domain || 'General'}</dd></div>
@@ -192,6 +201,11 @@ export default function PackageImportScreen({
           <p className="status-message import-success" role="status">
             <CheckCircle2 size={18} /> {formatImportSuccess(result)}
           </p>
+          {result.questionsJsonNormalized && (
+            <p className="status-message import-normalization-notice" role="status">
+              检测到中文弯引号，已自动转换为英文半角双引号后解析。
+            </p>
+          )}
           <p>
             已{result.dayAction === 'updated' ? '更新' : '创建'} Day。新增题目 {result.addedQuestions} 道，
             更新题目 {result.updatedQuestions} 道。
