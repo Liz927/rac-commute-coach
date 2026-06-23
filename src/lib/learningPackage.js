@@ -131,6 +131,22 @@ function normalizeType(type, correctOptionIds) {
   return correctOptionIds.length > 1 ? 'multiple' : 'single'
 }
 
+function assertNoCurlyQuotesInV2QuestionsJson(questionsRaw) {
+  const index = questionsRaw.search(/[“”]/)
+  if (index < 0) return
+
+  const character = questionsRaw[index]
+  const previewStart = Math.max(0, index - 24)
+  const previewEnd = Math.min(questionsRaw.length, index + 25)
+  const preview = questionsRaw
+    .slice(previewStart, previewEnd)
+    .replace(/\n/g, '\\n')
+
+  throw new Error(
+    `QUESTIONS_JSON 包含中文弯引号 ${character}（第 ${index + 1} 个字符）。附近片段：${preview}。请使用英文半角双引号 " 作为 JSON 的字段名和字符串边界。`,
+  )
+}
+
 function normalizeOptions(question, questionId) {
   if (!Array.isArray(question.options) || question.options.length < 2) {
     throw new Error(`题目 ${questionId} 至少需要两个选项`)
@@ -211,6 +227,9 @@ function parsePackageBlocks({ version, metaRaw, contentMarkdown, questionsRaw })
 
   let parsedQuestions
   try {
+    if (version === 'RAC_DAY_PACKAGE_V2') {
+      assertNoCurlyQuotesInV2QuestionsJson(questionsRaw)
+    }
     parsedQuestions = JSON.parse(questionsRaw)
   } catch (error) {
     throw new Error(`QUESTIONS_JSON 不是合法 JSON：${error.message}`)
