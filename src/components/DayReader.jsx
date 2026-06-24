@@ -6,6 +6,7 @@ import { buildQuestionPackage } from '../lib/package'
 import { upsertQuickNote, upsertSectionNote } from '../lib/day'
 import { getDayQuizAction, getLinkedDayQuestions } from '../lib/dayQuestions'
 import { parseMarkdown } from '../lib/markdown'
+import { scrollContainerToTop } from '../lib/scroll'
 import InlineNote from './InlineNote'
 import MarkButtons from './MarkButtons'
 import QuestionCard from './QuestionCard'
@@ -153,6 +154,10 @@ function QuickNotesList({ day, onUpdate }) {
           <textarea
             aria-label="编辑快速疑问"
             value={note.text}
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            inputMode="text"
             onChange={(event) => updateNote(note, { text: event.target.value })}
           />
           <div className="quick-note-item-actions">
@@ -223,6 +228,20 @@ export default function DayReader({ day, allQuizQuestions = [], onBack, onEdit, 
     setPackageDraft(day.reviewDraft || generatedPackageText)
   }, [day.id, day.reviewDraft])
 
+  useEffect(() => {
+    if (activeTab !== 'questions') return undefined
+    let secondFrame
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        scrollContainerToTop(readerScrollRef.current, window)
+      })
+    })
+    return () => {
+      window.cancelAnimationFrame(firstFrame)
+      if (secondFrame) window.cancelAnimationFrame(secondFrame)
+    }
+  }, [activeTab])
+
   async function copyPackage() {
     await navigator.clipboard.writeText(packageDraft)
     setCopied(true)
@@ -281,12 +300,7 @@ export default function DayReader({ day, allQuizQuestions = [], onBack, onEdit, 
   }
 
   function scrollToTop() {
-    const scrollContainer = readerScrollRef.current || document.querySelector('.scroll-container')
-    if (scrollContainer) {
-      scrollContainer.scrollTo({ top: 0, behavior: 'smooth' })
-      return
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    scrollContainerToTop(readerScrollRef.current, window, 'smooth')
   }
 
   function startDayQuiz() {
@@ -295,7 +309,11 @@ export default function DayReader({ day, allQuizQuestions = [], onBack, onEdit, 
   }
 
   return (
-    <main className="reader-screen scroll-container" ref={readerScrollRef}>
+    <main
+      className="reader-screen scroll-container"
+      data-scroll-container="day-detail"
+      ref={readerScrollRef}
+    >
       <header className="reader-header">
         <button className="icon-button" type="button" onClick={onBack} aria-label="返回">
           <ArrowLeft />
@@ -475,6 +493,10 @@ De Novo 和 PMA 的边界想再问
             </div>
             <textarea
               value={packageDraft}
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              inputMode="text"
               onChange={(event) => setPackageDraft(event.target.value)}
               aria-label="今日问题包文本"
             />

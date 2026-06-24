@@ -146,6 +146,10 @@ export default function DayEditor({ initialDay, onSave, onCancel }) {
           <textarea
             className="markdown-input"
             value={day.contentMarkdown}
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            inputMode="text"
             onChange={(event) => setDay({ ...day, contentMarkdown: event.target.value })}
             placeholder="# RAC Day 1｜主题&#10;&#10;## S1｜今日一句话&#10;&#10;..."
           />
@@ -166,6 +170,10 @@ export default function DayEditor({ initialDay, onSave, onCancel }) {
           自由备注
           <textarea
             value={day.notes}
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            inputMode="text"
             onChange={(event) => setDay({ ...day, notes: event.target.value })}
             placeholder="晚上回收时一并导出"
           />
@@ -207,6 +215,10 @@ export default function DayEditor({ initialDay, onSave, onCancel }) {
               </div>
               <textarea
                 value={getQuestionStem(question)}
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                inputMode="text"
                 onChange={(event) => updateQuestion(question.id, { stem: event.target.value })}
                 placeholder="题干 stem"
               />
@@ -239,6 +251,10 @@ export default function DayEditor({ initialDay, onSave, onCancel }) {
                 解释
                 <textarea
                   value={question.explanation}
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  inputMode="text"
                   onChange={(event) =>
                     updateQuestion(question.id, { explanation: event.target.value })
                   }

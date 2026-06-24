@@ -24,3 +24,16 @@ export function createDeferredDraftWriter(write, delay = 450) {
     },
   }
 }
+
+export function shouldSyncDraftFromDay({
+  currentDayId,
+  nextDayId,
+  isFocused,
+  isComposing,
+  localValue,
+  savedValue,
+}) {
+  if (currentDayId !== nextDayId) return true
+  if (isFocused || isComposing) return false
+  return localValue !== savedValue
+}

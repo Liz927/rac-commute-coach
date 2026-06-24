@@ -59,6 +59,10 @@ export default function InlineNote({
           <textarea
             rows={minRows}
             value={draft}
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            inputMode="text"
             onChange={(event) => setDraft(event.target.value)}
             placeholder={placeholder}
           />

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createDeferredDraftWriter } from './deferredDraft'
+import { createDeferredDraftWriter, shouldSyncDraftFromDay } from './deferredDraft'
 
 describe('createDeferredDraftWriter', () => {
   afterEach(() => {
@@ -32,5 +32,34 @@ describe('createDeferredDraftWriter', () => {
 
     expect(write).toHaveBeenCalledTimes(1)
     expect(write).toHaveBeenCalledWith('控制')
+  })
+
+  it('does not replace a focused or composing local draft with an external Day value', () => {
+    expect(shouldSyncDraftFromDay({
+      currentDayId: 'day-1',
+      nextDayId: 'day-1',
+      isFocused: true,
+      isComposing: false,
+      localValue: 'special',
+      savedValue: '',
+    })).toBe(false)
+
+    expect(shouldSyncDraftFromDay({
+      currentDayId: 'day-1',
+      nextDayId: 'day-1',
+      isFocused: false,
+      isComposing: true,
+      localValue: 'controls',
+      savedValue: '',
+    })).toBe(false)
+
+    expect(shouldSyncDraftFromDay({
+      currentDayId: 'day-1',
+      nextDayId: 'day-2',
+      isFocused: true,
+      isComposing: true,
+      localValue: 'old draft',
+      savedValue: 'new Day draft',
+    })).toBe(true)
   })
 })

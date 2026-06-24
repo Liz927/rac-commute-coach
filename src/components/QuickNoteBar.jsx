@@ -1,7 +1,7 @@
 import { MessageCircleQuestion, Pencil, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { createQuickNote, upsertQuickNote } from '../lib/day'
-import { createDeferredDraftWriter } from '../lib/deferredDraft'
+import { createDeferredDraftWriter, shouldSyncDraftFromDay } from '../lib/deferredDraft'
 
 const TAGS = [
   { value: 'general', label: '备注' },
@@ -30,6 +30,8 @@ export default function QuickNoteBar({ day, onUpdate }) {
   const dayRef = useRef(day)
   const onUpdateRef = useRef(onUpdate)
   const draftRef = useRef(day.quickDraft || '')
+  const draftDayIdRef = useRef(day.id)
+  const isFocusedRef = useRef(false)
   const isComposingRef = useRef(false)
   const writerRef = useRef(null)
   const quickNotes = day.quickNotes || []
@@ -47,7 +49,16 @@ export default function QuickNoteBar({ day, onUpdate }) {
     dayRef.current = day
     onUpdateRef.current = onUpdate
     const savedDraft = day.quickDraft || ''
-    if (!isComposingRef.current && savedDraft !== draftRef.current) {
+    const shouldSync = shouldSyncDraftFromDay({
+      currentDayId: draftDayIdRef.current,
+      nextDayId: day.id,
+      isFocused: isFocusedRef.current,
+      isComposing: isComposingRef.current,
+      localValue: draftRef.current,
+      savedValue: savedDraft,
+    })
+    draftDayIdRef.current = day.id
+    if (shouldSync) {
       draftRef.current = savedDraft
       setDraft(savedDraft)
     }
@@ -70,7 +81,8 @@ export default function QuickNoteBar({ day, onUpdate }) {
   function handleDraftChange(event) {
     const value = event.currentTarget.value
     setLocalDraft(value)
-    if (!isComposingRef.current) writerRef.current.schedule(value)
+    const isComposing = isComposingRef.current || event.nativeEvent.isComposing
+    if (!isComposing) writerRef.current.schedule(value)
   }
 
   function handleCompositionStart() {
@@ -84,6 +96,7 @@ export default function QuickNoteBar({ day, onUpdate }) {
   }
 
   function handleBlur() {
+    isFocusedRef.current = false
     if (!isComposingRef.current) writerRef.current.flush(draftRef.current)
   }
 
@@ -188,11 +201,18 @@ export default function QuickNoteBar({ day, onUpdate }) {
           rows={expanded ? 3 : 1}
           value={draft}
           onClick={() => setExpanded(true)}
-          onFocus={() => setExpanded(true)}
+          onFocus={() => {
+            isFocusedRef.current = true
+            setExpanded(true)
+          }}
           onChange={handleDraftChange}
           onCompositionStart={handleCompositionStart}
           onCompositionEnd={handleCompositionEnd}
           onBlur={handleBlur}
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          inputMode="text"
           placeholder="随手记一个疑问…"
         />
         {expanded && (
