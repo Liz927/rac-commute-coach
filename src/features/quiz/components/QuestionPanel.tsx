@@ -1,7 +1,7 @@
 import { CheckCircle2, Circle, Square, Star } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import type { Question } from '../types'
-import { formatCorrectAnswer } from '../lib/quiz'
+import { formatCorrectAnswer, shouldAutoSubmitAnswer } from '../lib/quiz'
 
 type AnswerResult = {
   isCorrect: boolean
@@ -41,8 +41,10 @@ export default function QuestionPanel({
 
   function toggleOption(optionId: string) {
     if (result) return
-    if (question.type === 'single') {
-      setSelectedOptionIds([optionId])
+    if (shouldAutoSubmitAnswer(question)) {
+      const nextSelection = [optionId]
+      setSelectedOptionIds(nextSelection)
+      setResult(onSubmit(question, nextSelection))
       return
     }
 

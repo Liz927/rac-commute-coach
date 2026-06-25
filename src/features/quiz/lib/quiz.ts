@@ -32,6 +32,10 @@ export function evaluateAnswer(question: Question, selectedOptionIds: string[]) 
   }
 }
 
+export function shouldAutoSubmitAnswer(question: Question) {
+  return question.type === 'single'
+}
+
 export function formatCorrectAnswer(question: Question) {
   const correctIds = new Set(question.correctOptionIds)
   return question.options

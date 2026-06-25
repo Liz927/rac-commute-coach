@@ -28,7 +28,7 @@ function normalizeQuestion(question, index) {
     isUnsure: Boolean(question.isUnsure),
     wantsToAsk: Boolean(question.wantsToAsk),
     isImportant: Boolean(question.isImportant),
-    showAnswer: Boolean(question.showAnswer),
+    showAnswer: Boolean(question.showAnswer || question.userAnswer),
     note: question.note || '',
     source: question.source || 'manual',
   }
@@ -65,7 +65,11 @@ function normalizeQuickNote(note, index) {
     : 'general'
   return {
     id: note.id || `imported-quick-note-${index + 1}`,
-    text: note.text || '',
+    text: note.text || note.content || '',
+    content: note.content || note.text || '',
+    dayId: note.dayId || '',
+    packId: note.packId || '',
+    sourceSection: note.sourceSection || '',
     tag,
     createdAt: note.createdAt || now,
     updatedAt: note.updatedAt || note.createdAt || now,
@@ -80,7 +84,7 @@ function normalizeQuestionStates(states) {
       {
         userAnswer: ['A', 'B', 'C', 'D'].includes(state?.userAnswer) ? state.userAnswer : undefined,
         isUnsure: Boolean(state?.isUnsure),
-        showAnswer: Boolean(state?.showAnswer),
+        showAnswer: Boolean(state?.showAnswer || state?.userAnswer),
         wantsToAsk: Boolean(state?.wantsToAsk),
         isImportant: Boolean(state?.isImportant),
         note: state?.note || '',

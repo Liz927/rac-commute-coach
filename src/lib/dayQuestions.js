@@ -11,19 +11,23 @@ export function getLinkedDayQuestions(day, allQuizQuestions = []) {
   return allQuizQuestions
     .filter((question) => question.packId === day.packId)
     .sort((left, right) => questionNumber(left, 0) - questionNumber(right, 0))
-    .map((question, index) => ({
-      id: question.id,
-      number: questionNumber(question, index + 1),
-      title: '默想题',
-      stem: question.prompt || '',
-      options: (question.options || []).map((option) => ({
-        key: option.key || option.id,
-        text: option.text || '',
-      })),
-      answer: question.answer || question.correctOptionIds?.[0] || 'A',
-      explanation: question.explanation || '',
-      ...(states[question.id] || {}),
-    }))
+    .map((question, index) => {
+      const state = states[question.id] || {}
+      return {
+        id: question.id,
+        number: questionNumber(question, index + 1),
+        title: '默想题',
+        stem: question.prompt || '',
+        options: (question.options || []).map((option) => ({
+          key: option.key || option.id,
+          text: option.text || '',
+        })),
+        answer: question.answer || question.correctOptionIds?.[0] || 'A',
+        explanation: question.explanation || '',
+        ...state,
+        showAnswer: state.showAnswer ?? Boolean(state.userAnswer),
+      }
+    })
 }
 
 export function getDayQuizAction(day, allQuizQuestions = []) {

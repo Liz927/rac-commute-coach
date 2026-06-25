@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { createEmptyDay, getDayStats, getOverallStats, mergeParsedQuestions } from './day'
+import {
+  appendQuickNoteToDay,
+  createEmptyDay,
+  getDayStats,
+  getOverallStats,
+  mergeParsedQuestions,
+  selectQuestionAnswerPatch,
+} from './day'
 
 describe('day helpers', () => {
   it('creates a complete editable Day shape', () => {
@@ -76,5 +83,40 @@ describe('day helpers', () => {
       isUnsure: true,
       showAnswer: true,
     })
+  })
+
+  it('selects an answer and immediately marks the answer reveal as visible', () => {
+    expect(selectQuestionAnswerPatch('C')).toEqual({
+      userAnswer: 'C',
+      showAnswer: true,
+    })
+  })
+
+  it('appends a quick note from the submitted text and keeps Day context', () => {
+    const day = {
+      id: 'day-5',
+      packId: 'rac-device-day-005',
+      quickDraft: 'old draft',
+      quickNotes: [],
+    }
+
+    const nextDay = appendQuickNoteToDay(
+      day,
+      '  special controls  ',
+      'general',
+      '2026-06-25T00:00:00.000Z',
+    )
+
+    expect(nextDay.quickDraft).toBe('')
+    expect(nextDay.quickNotes).toEqual([
+      expect.objectContaining({
+        text: 'special controls',
+        content: 'special controls',
+        dayId: 'day-5',
+        packId: 'rac-device-day-005',
+        tag: 'general',
+        createdAt: '2026-06-25T00:00:00.000Z',
+      }),
+    ])
   })
 })

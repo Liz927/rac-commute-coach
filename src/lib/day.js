@@ -85,27 +85,74 @@ export function createEmptyDay(dayNumber = 1, now = new Date().toISOString()) {
 }
 
 export function createQuickNote(text, tag = 'general', now = new Date().toISOString()) {
+  const normalizedText = text.trim()
   return {
     id: makeId('quick-note'),
-    text: text.trim(),
+    text: normalizedText,
+    content: normalizedText,
     tag: ['question', 'unsure', 'important', 'general'].includes(tag) ? tag : 'general',
     createdAt: now,
     updatedAt: now,
   }
 }
 
+export function appendQuickNoteToDay(
+  day,
+  text,
+  tag = 'general',
+  now = new Date().toISOString(),
+) {
+  const note = createQuickNote(text, tag, now)
+  return {
+    ...day,
+    quickDraft: '',
+    quickNotes: [
+      ...(day.quickNotes || []),
+      {
+        ...note,
+        dayId: day.id || '',
+        packId: day.packId || '',
+      },
+    ],
+  }
+}
+
 export function upsertQuickNote(quickNotes = [], nextNote) {
   const now = new Date().toISOString()
-  return quickNotes.map((note) =>
+  const found = quickNotes.some((note) => note.id === nextNote.id)
+  const updatedNotes = quickNotes.map((note) =>
     note.id === nextNote.id
       ? {
           ...note,
-          text: nextNote.text ?? note.text,
+          text: nextNote.text ?? nextNote.content ?? note.text,
+          content: nextNote.content ?? nextNote.text ?? note.content ?? note.text,
           tag: nextNote.tag ?? note.tag,
+          dayId: nextNote.dayId ?? note.dayId,
+          packId: nextNote.packId ?? note.packId,
+          sourceSection: nextNote.sourceSection ?? note.sourceSection,
           updatedAt: now,
         }
       : note,
   )
+
+  if (found) return updatedNotes
+  return [
+    ...updatedNotes,
+    {
+      ...nextNote,
+      text: nextNote.text ?? nextNote.content ?? '',
+      content: nextNote.content ?? nextNote.text ?? '',
+      createdAt: nextNote.createdAt || now,
+      updatedAt: nextNote.updatedAt || now,
+    },
+  ]
+}
+
+export function selectQuestionAnswerPatch(answerKey) {
+  return {
+    userAnswer: answerKey,
+    showAnswer: true,
+  }
 }
 
 export function upsertSectionNote(sectionNotes = [], nextNote) {

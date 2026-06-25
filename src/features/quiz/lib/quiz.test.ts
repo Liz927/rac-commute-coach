@@ -5,6 +5,7 @@ import {
   formatCorrectAnswer,
   getAvailableFilters,
   getWrongQuestionIds,
+  shouldAutoSubmitAnswer,
   validateQuestionPack,
 } from './quiz'
 import type { Question, QuestionPack, QuizAttempt } from '../types'
@@ -67,6 +68,11 @@ describe('evaluateAnswer', () => {
 
   it('formats correct option labels for answer reveal text', () => {
     expect(formatCorrectAnswer(questions[1])).toBe('A. Complaint trends; B. Nonconforming product data')
+  })
+
+  it('auto-submits single-choice questions but leaves multiple-choice questions manual', () => {
+    expect(shouldAutoSubmitAnswer(questions[0])).toBe(true)
+    expect(shouldAutoSubmitAnswer(questions[1])).toBe(false)
   })
 })
 

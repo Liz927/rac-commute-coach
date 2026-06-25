@@ -52,8 +52,16 @@ describe('normalizeImport', () => {
           reviewDraft: 'RAC Day 2 回收问题草稿',
           freeNotes: '全局自由备注',
           quickDraft: '还没加入的问题草稿',
-          quickNotes: [
-            { id: 'qn1', text: 'quick note one', tag: 'question', createdAt: '2026-06-18T00:00:00.000Z' },
+      quickNotes: [
+            {
+              id: 'qn1',
+              text: 'quick note one',
+              content: 'quick note one',
+              dayId: 'd2',
+              packId: 'pack-2',
+              tag: 'question',
+              createdAt: '2026-06-18T00:00:00.000Z',
+            },
             { text: 'quick note two', tag: 'bad-tag' },
           ],
           sectionNotes: [{ sectionId: 's1', sectionTitle: 'S1', note: 'section note' }],
@@ -84,6 +92,9 @@ describe('normalizeImport', () => {
       expect.objectContaining({
         id: 'qn1',
         text: 'quick note one',
+        content: 'quick note one',
+        dayId: 'd2',
+        packId: 'pack-2',
         tag: 'question',
         createdAt: '2026-06-18T00:00:00.000Z',
       }),

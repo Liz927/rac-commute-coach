@@ -1,6 +1,6 @@
 import { MessageCircleQuestion, Pencil, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { createQuickNote, upsertQuickNote } from '../lib/day'
+import { appendQuickNoteToDay, upsertQuickNote } from '../lib/day'
 import { createDeferredDraftWriter, shouldSyncDraftFromDay } from '../lib/deferredDraft'
 
 const TAGS = [
@@ -30,6 +30,7 @@ export default function QuickNoteBar({ day, onUpdate }) {
   const dayRef = useRef(day)
   const onUpdateRef = useRef(onUpdate)
   const draftRef = useRef(day.quickDraft || '')
+  const textareaRef = useRef(null)
   const draftDayIdRef = useRef(day.id)
   const isFocusedRef = useRef(false)
   const isComposingRef = useRef(false)
@@ -115,14 +116,11 @@ export default function QuickNoteBar({ day, onUpdate }) {
   }
 
   function addNote() {
-    if (!canAdd) return
+    const submittedText = textareaRef.current?.value ?? draftRef.current
+    if (!submittedText.trim()) return
     writerRef.current.cancel()
     const currentDay = dayRef.current
-    onUpdate({
-      ...currentDay,
-      quickDraft: '',
-      quickNotes: [...(currentDay.quickNotes || []), createQuickNote(draft)],
-    })
+    onUpdateRef.current(appendQuickNoteToDay(currentDay, submittedText))
     setLocalDraft('')
     setExpanded(false)
     setDrawerOpen(true)
@@ -165,6 +163,10 @@ export default function QuickNoteBar({ day, onUpdate }) {
                       <textarea
                         aria-label="编辑快速疑问"
                         value={note.text}
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        spellCheck={false}
+                        inputMode="text"
                         onChange={(event) => updateNote(note, { text: event.target.value })}
                       />
                     ) : (
@@ -197,6 +199,7 @@ export default function QuickNoteBar({ day, onUpdate }) {
 
       <div className="quick-note-inner">
         <textarea
+          ref={textareaRef}
           aria-label="快速疑问记录"
           rows={expanded ? 3 : 1}
           value={draft}

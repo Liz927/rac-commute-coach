@@ -482,6 +482,18 @@ De Novo 和 PMA 的边界想再问
                   : '当前 Day 没有 packId，无法关联题库。'}
               </div>
             )}
+            <section className="reading-finish-actions quiz-finish-actions" aria-label="默想题完成后的操作">
+              <p>已到本页题目末尾</p>
+              <div>
+                <button type="button" onClick={scrollToTop}>
+                  <ArrowUp size={18} /> 回到顶部
+                </button>
+                <button className="start-day-quiz" type="button" onClick={openPackage}>
+                  生成回收问题包
+                  <ArrowRight size={18} />
+                </button>
+              </div>
+            </section>
             </section>
           )}
 

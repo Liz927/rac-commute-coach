@@ -52,6 +52,32 @@ describe('getLinkedDayQuestions', () => {
     expect(questions[0].options).toEqual([{ key: 'A', text: 'A' }, { key: 'C', text: 'C' }])
   })
 
+  it('shows the explanation by default when a linked question already has an answer', () => {
+    const questions = getLinkedDayQuestions(
+      {
+        packId: 'rac-device-day-004',
+        questionStates: {
+          'rac-d4-q001': { userAnswer: 'B' },
+        },
+      },
+      [
+        {
+          id: 'rac-d4-q001',
+          packId: 'rac-device-day-004',
+          prompt: 'Question?',
+          options: [{ id: 'A', text: 'A' }, { id: 'B', text: 'B' }],
+          correctOptionIds: ['B'],
+          explanation: 'Because B.',
+        },
+      ],
+    )
+
+    expect(questions[0]).toMatchObject({
+      userAnswer: 'B',
+      showAnswer: true,
+    })
+  })
+
   it('uses legacy Day questions when no packId exists', () => {
     const legacyQuestions = [{ id: 'legacy-q', stem: 'Legacy question' }]
     expect(getLinkedDayQuestions({ questions: legacyQuestions }, [])).toBe(legacyQuestions)

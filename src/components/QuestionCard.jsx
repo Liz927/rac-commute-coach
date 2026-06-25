@@ -1,10 +1,10 @@
 import { Eye, EyeOff, HelpCircle } from 'lucide-react'
 import {
-  OPTION_KEYS,
   getQuestionAnswer,
   getQuestionLabel,
   getQuestionOptions,
   getQuestionStem,
+  selectQuestionAnswerPatch,
   upsertQuestionNote,
 } from '../lib/day'
 import InlineNote from './InlineNote'
@@ -16,6 +16,7 @@ export default function QuestionCard({ day, question, onUpdate, onStateChange })
   const answer = getQuestionAnswer(question)
   const options = getQuestionOptions(question)
   const answered = Boolean(question.userAnswer)
+  const answerVisible = Boolean(question.showAnswer)
   const isCorrect = answered && question.userAnswer === answer
   const questionNote =
     (day.questionNotes || []).find((note) => note.questionId === question.id)?.note ||
@@ -54,8 +55,8 @@ export default function QuestionCard({ day, question, onUpdate, onStateChange })
         {options.map((option) => {
           const key = option.key
           const selected = question.userAnswer === key
-          const revealedCorrect = question.showAnswer && answer === key
-          const revealedWrong = question.showAnswer && selected && !isCorrect
+          const revealedCorrect = answerVisible && answer === key
+          const revealedWrong = answerVisible && selected && !isCorrect
           return (
             <button
               className={[
@@ -65,7 +66,7 @@ export default function QuestionCard({ day, question, onUpdate, onStateChange })
               ].join(' ')}
               key={key}
               type="button"
-              onClick={() => updateQuestion({ userAnswer: key })}
+              onClick={() => updateQuestion(selectQuestionAnswerPatch(key))}
             >
               <strong>{key}</strong>
               <span>{option.text || `选项 ${key}`}</span>
@@ -84,19 +85,19 @@ export default function QuestionCard({ day, question, onUpdate, onStateChange })
         </button>
         <button
           type="button"
-          onClick={() => updateQuestion({ showAnswer: !question.showAnswer })}
+          onClick={() => updateQuestion({ showAnswer: !answerVisible })}
         >
-          {question.showAnswer ? <EyeOff size={19} /> : <Eye size={19} />}
-          {question.showAnswer ? '隐藏答案' : '显示答案'}
+          {answerVisible ? <EyeOff size={19} /> : <Eye size={19} />}
+          {answerVisible ? '隐藏答案' : '显示答案'}
         </button>
       </div>
 
-      {question.showAnswer && (
+      {answerVisible && (
         <div className={`answer-reveal ${isCorrect ? 'correct' : answered ? 'wrong' : ''}`}>
           <strong>正确答案：{answer || '未设置'}</strong>
           {answered && (
             <span>
-              你选了 {question.userAnswer}，正确答案是 {answer}
+              你选择了 {question.userAnswer}，正确答案是 {answer}
               {isCorrect ? '。回答正确。' : '。'}
             </span>
           )}
