@@ -71,6 +71,7 @@ function normalizeQuickNote(note, index) {
     packId: note.packId || '',
     sourceSection: note.sourceSection || '',
     tag,
+    syncStatus: note.syncStatus || 'pending',
     createdAt: note.createdAt || now,
     updatedAt: note.updatedAt || note.createdAt || now,
   }

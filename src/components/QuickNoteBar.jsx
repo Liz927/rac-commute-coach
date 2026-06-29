@@ -1,6 +1,6 @@
 import { MessageCircleQuestion, Pencil, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { appendQuickNoteToDay, upsertQuickNote } from '../lib/day'
+import { appendQuickNoteToDay, getNotesForDay, upsertQuickNote } from '../lib/day'
 import { createDeferredDraftWriter, shouldSyncDraftFromDay } from '../lib/deferredDraft'
 
 const TAGS = [
@@ -35,7 +35,7 @@ export default function QuickNoteBar({ day, onUpdate }) {
   const isFocusedRef = useRef(false)
   const isComposingRef = useRef(false)
   const writerRef = useRef(null)
-  const quickNotes = day.quickNotes || []
+  const quickNotes = getNotesForDay(day)
   const canAdd = Boolean(draft.trim())
 
   if (!writerRef.current) {
@@ -104,14 +104,14 @@ export default function QuickNoteBar({ day, onUpdate }) {
   function updateNote(note, patch) {
     onUpdate({
       ...day,
-      quickNotes: upsertQuickNote(quickNotes, { ...note, ...patch }),
+      quickNotes: upsertQuickNote(day.quickNotes || [], { ...note, ...patch }),
     })
   }
 
   function deleteNote(id) {
     onUpdate({
       ...day,
-      quickNotes: quickNotes.filter((note) => note.id !== id),
+      quickNotes: (day.quickNotes || []).filter((note) => note.id !== id),
     })
   }
 
@@ -120,7 +120,9 @@ export default function QuickNoteBar({ day, onUpdate }) {
     if (!submittedText.trim()) return
     writerRef.current.cancel()
     const currentDay = dayRef.current
-    onUpdateRef.current(appendQuickNoteToDay(currentDay, submittedText))
+    const nextDay = appendQuickNoteToDay(currentDay, submittedText)
+    dayRef.current = nextDay
+    onUpdateRef.current(nextDay)
     setLocalDraft('')
     setExpanded(false)
     setDrawerOpen(true)

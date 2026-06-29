@@ -83,6 +83,94 @@ describe('mergeSyncPayloads', () => {
     ])
   })
 
+  it('does not let a stale remote Day snapshot remove a local pending quick note', () => {
+    const merged = mergeSyncPayloads(
+      {
+        days: [
+          {
+            id: 'day-7',
+            title: 'Local Day 7',
+            packId: 'rac-device-day-007',
+            updatedAt: '2026-06-25T10:00:00.000Z',
+            quickNotes: [
+              {
+                id: 'note-local-pending',
+                dayId: 'day-7',
+                packId: 'rac-device-day-007',
+                content: 'local pending note',
+                text: 'local pending note',
+                syncStatus: 'pending',
+                createdAt: '2026-06-25T10:00:00.000Z',
+                updatedAt: '2026-06-25T10:00:00.000Z',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        days: [
+          {
+            id: 'day-7',
+            title: 'Remote Day 7',
+            packId: 'rac-device-day-007',
+            updatedAt: '2026-06-25T11:00:00.000Z',
+            quickNotes: [],
+          },
+        ],
+      },
+    )
+
+    expect(merged.days[0].quickNotes).toEqual([
+      expect.objectContaining({
+        id: 'note-local-pending',
+        content: 'local pending note',
+        syncStatus: 'pending',
+      }),
+    ])
+  })
+
+  it('keeps the newest version of a quick note when local and remote both have it', () => {
+    const merged = mergeSyncPayloads(
+      {
+        days: [
+          {
+            id: 'day-7',
+            updatedAt: '2026-06-25T10:00:00.000Z',
+            quickNotes: [
+              {
+                id: 'same-note',
+                content: 'new local text',
+                text: 'new local text',
+                updatedAt: '2026-06-25T10:00:00.000Z',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        days: [
+          {
+            id: 'day-7',
+            updatedAt: '2026-06-25T11:00:00.000Z',
+            quickNotes: [
+              {
+                id: 'same-note',
+                content: 'old remote text',
+                text: 'old remote text',
+                updatedAt: '2026-06-25T09:00:00.000Z',
+              },
+            ],
+          },
+        ],
+      },
+    )
+
+    expect(merged.days[0].quickNotes[0]).toMatchObject({
+      id: 'same-note',
+      content: 'new local text',
+    })
+  })
+
   it('removes undefined values before a payload is sent to Firestore', () => {
     expect(toFirestoreSafe({
       title: 'Day 1',

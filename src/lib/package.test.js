@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { appendQuickNoteToDay } from './day'
 import { buildQuestionPackage } from './package'
 
 describe('buildQuestionPackage', () => {
@@ -149,5 +150,54 @@ describe('buildQuestionPackage', () => {
     expect(text).toContain('五、我标记为【重要】的内容')
     expect(text).toContain('D5-Q2：Important question')
     expect(text).toContain('我的备注：重要题备注。')
+  })
+
+  it('includes a quick note added immediately before package generation', () => {
+    const day = appendQuickNoteToDay(
+      {
+        id: 'day-7',
+        dayNumber: 7,
+        title: 'Day 7 topic',
+        packId: 'rac-device-day-007',
+        quickNotes: [],
+        marks: [],
+        questions: [],
+      },
+      'special controls / cutoff / LoQ',
+      'general',
+      '2026-06-25T00:00:00.000Z',
+    )
+
+    expect(buildQuestionPackage(day)).toContain('special controls / cutoff / LoQ')
+  })
+
+  it('filters quick notes to the current Day and pack when generating a package', () => {
+    const text = buildQuestionPackage({
+      id: 'day-7',
+      dayNumber: 7,
+      title: 'Day 7 topic',
+      packId: 'rac-device-day-007',
+      quickNotes: [
+        {
+          id: 'day-6-note',
+          dayId: 'day-6',
+          packId: 'rac-device-day-006',
+          text: 'Day 6 only',
+          content: 'Day 6 only',
+        },
+        {
+          id: 'day-7-note',
+          dayId: 'day-7',
+          packId: 'rac-device-day-007',
+          text: 'Day 7 only',
+          content: 'Day 7 only',
+        },
+      ],
+      marks: [],
+      questions: [],
+    })
+
+    expect(text).toContain('Day 7 only')
+    expect(text).not.toContain('Day 6 only')
   })
 })

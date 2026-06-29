@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   appendQuickNoteToDay,
   createEmptyDay,
+  getNotesForDay,
+  getQuickNoteCount,
   getDayStats,
   getOverallStats,
   mergeParsedQuestions,
@@ -115,8 +117,52 @@ describe('day helpers', () => {
         dayId: 'day-5',
         packId: 'rac-device-day-005',
         tag: 'general',
+        syncStatus: 'pending',
         createdAt: '2026-06-25T00:00:00.000Z',
       }),
+    ])
+  })
+
+  it('keeps added quick notes available after a collapse and reopen cycle', () => {
+    const day = appendQuickNoteToDay(
+      {
+        id: 'day-7',
+        packId: 'rac-device-day-007',
+        quickNotes: [],
+      },
+      'special controls / cutoff / LoQ',
+      'general',
+      '2026-06-25T00:00:00.000Z',
+    )
+
+    expect(getQuickNoteCount(day)).toBe(1)
+    expect(getNotesForDay(day)).toEqual([
+      expect.objectContaining({
+        content: 'special controls / cutoff / LoQ',
+        dayId: 'day-7',
+        packId: 'rac-device-day-007',
+      }),
+    ])
+  })
+
+  it('keeps multiple quick notes when appends happen back to back', () => {
+    const first = appendQuickNoteToDay(
+      { id: 'day-7', packId: 'rac-device-day-007', quickNotes: [] },
+      'first note',
+      'general',
+      '2026-06-25T00:00:00.000Z',
+    )
+    const second = appendQuickNoteToDay(
+      first,
+      'second note',
+      'general',
+      '2026-06-25T00:01:00.000Z',
+    )
+
+    expect(getQuickNoteCount(second)).toBe(2)
+    expect(getNotesForDay(second).map((note) => note.content)).toEqual([
+      'first note',
+      'second note',
     ])
   })
 })

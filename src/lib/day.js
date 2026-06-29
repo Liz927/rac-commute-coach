@@ -5,6 +5,11 @@ function makeId(prefix = 'item') {
 
 export const OPTION_KEYS = ['A', 'B', 'C', 'D']
 
+function timestamp(value) {
+  const parsed = Date.parse(value || '')
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
 export function getQuestionNumber(question, fallback = 1) {
   if (Number(question.number)) return Number(question.number)
   const labelMatch = String(question.label || '').match(/\d+/)
@@ -84,13 +89,22 @@ export function createEmptyDay(dayNumber = 1, now = new Date().toISOString()) {
   }
 }
 
-export function createQuickNote(text, tag = 'general', now = new Date().toISOString()) {
+export function createQuickNote(
+  text,
+  tag = 'general',
+  now = new Date().toISOString(),
+  context = {},
+) {
   const normalizedText = text.trim()
   return {
     id: makeId('quick-note'),
     text: normalizedText,
     content: normalizedText,
+    dayId: context.dayId || '',
+    packId: context.packId || '',
+    sourceSection: context.sourceSection || '',
     tag: ['question', 'unsure', 'important', 'general'].includes(tag) ? tag : 'general',
+    syncStatus: context.syncStatus || 'pending',
     createdAt: now,
     updatedAt: now,
   }
@@ -102,18 +116,45 @@ export function appendQuickNoteToDay(
   tag = 'general',
   now = new Date().toISOString(),
 ) {
-  const note = createQuickNote(text, tag, now)
+  const note = createQuickNote(text, tag, now, {
+    dayId: day.id || '',
+    packId: day.packId || '',
+  })
   return {
     ...day,
     quickDraft: '',
     quickNotes: [
       ...(day.quickNotes || []),
-      {
-        ...note,
-        dayId: day.id || '',
-        packId: day.packId || '',
-      },
+      note,
     ],
+  }
+}
+
+function noteText(note) {
+  return String(note?.content ?? note?.text ?? '').trim()
+}
+
+export function getNotesForDay(day, notes = day.quickNotes || []) {
+  return notes
+    .filter((note) => noteText(note))
+    .filter((note) => {
+      const matchesDay = !note.dayId || note.dayId === day.id
+      const matchesPack = !note.packId || !day.packId || note.packId === day.packId
+      return matchesDay && matchesPack
+    })
+}
+
+export function getQuickNoteCount(day) {
+  return getNotesForDay(day).length
+}
+
+function normalizeQuickNote(note) {
+  const content = noteText(note)
+  return {
+    ...note,
+    text: note.text ?? content,
+    content: note.content ?? content,
+    syncStatus: note.syncStatus || 'pending',
   }
 }
 
@@ -130,6 +171,7 @@ export function upsertQuickNote(quickNotes = [], nextNote) {
           dayId: nextNote.dayId ?? note.dayId,
           packId: nextNote.packId ?? note.packId,
           sourceSection: nextNote.sourceSection ?? note.sourceSection,
+          syncStatus: nextNote.syncStatus ?? note.syncStatus ?? 'pending',
           updatedAt: now,
         }
       : note,
@@ -142,10 +184,33 @@ export function upsertQuickNote(quickNotes = [], nextNote) {
       ...nextNote,
       text: nextNote.text ?? nextNote.content ?? '',
       content: nextNote.content ?? nextNote.text ?? '',
+      syncStatus: nextNote.syncStatus || 'pending',
       createdAt: nextNote.createdAt || now,
       updatedAt: nextNote.updatedAt || now,
     },
   ]
+}
+
+export function mergeQuickNotes(localNotes = [], remoteNotes = []) {
+  const merged = new Map()
+  remoteNotes.map(normalizeQuickNote).forEach((note) => merged.set(note.id, note))
+  localNotes.map(normalizeQuickNote).forEach((localNote) => {
+    const remoteNote = merged.get(localNote.id)
+    if (!remoteNote || timestamp(localNote.updatedAt) >= timestamp(remoteNote.updatedAt)) {
+      merged.set(localNote.id, {
+        ...remoteNote,
+        ...localNote,
+        syncStatus: localNote.syncStatus || remoteNote?.syncStatus || 'pending',
+      })
+      return
+    }
+    merged.set(localNote.id, {
+      ...localNote,
+      ...remoteNote,
+      syncStatus: remoteNote.syncStatus || localNote.syncStatus || 'pending',
+    })
+  })
+  return Array.from(merged.values())
 }
 
 export function selectQuestionAnswerPatch(answerKey) {

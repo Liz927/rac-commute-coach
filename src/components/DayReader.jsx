@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { buildQuestionPackage } from '../lib/package'
-import { upsertQuickNote, upsertSectionNote } from '../lib/day'
+import { getNotesForDay, upsertQuickNote, upsertSectionNote } from '../lib/day'
 import { getDayQuizAction, getLinkedDayQuestions } from '../lib/dayQuestions'
 import { parseMarkdown } from '../lib/markdown'
 import { scrollContainerToTop } from '../lib/scroll'
@@ -130,20 +130,20 @@ function ReaderLookup({ sections, query, isOpen, onToggle, onQueryChange, onJump
 }
 
 function QuickNotesList({ day, onUpdate }) {
-  const notes = day.quickNotes || []
+  const notes = getNotesForDay(day)
   if (!notes.length) return <p className="quick-notes-empty">还没有随手记录的问题。</p>
 
   function updateNote(note, patch) {
     onUpdate({
       ...day,
-      quickNotes: upsertQuickNote(notes, { ...note, ...patch }),
+      quickNotes: upsertQuickNote(day.quickNotes || [], { ...note, ...patch }),
     })
   }
 
   function deleteNote(id) {
     onUpdate({
       ...day,
-      quickNotes: notes.filter((note) => note.id !== id),
+      quickNotes: (day.quickNotes || []).filter((note) => note.id !== id),
     })
   }
 
@@ -409,7 +409,7 @@ De Novo 和 PMA 的边界想再问
                 <div className="quick-notes-panel">
                   <div className="quick-notes-panel-head">
                     <strong>随手疑问</strong>
-                    <span>{(day.quickNotes || []).length} 条</span>
+                    <span>{getNotesForDay(day).length} 条</span>
                   </div>
                   <QuickNotesList day={day} onUpdate={updateReaderDay} />
                 </div>

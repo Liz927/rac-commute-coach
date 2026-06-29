@@ -1,4 +1,4 @@
-import { getQuestionAnswer, getQuestionLabel, getQuestionStem } from './day'
+import { getNotesForDay, getQuestionAnswer, getQuestionLabel, getQuestionStem } from './day'
 
 function noteText(note) {
   return note?.trim() || ''
@@ -108,9 +108,8 @@ export function buildQuestionPackage(day) {
   )
   const wrongQuestionIds = new Set(wrongQuestions.map((question) => question.id))
   const freeNoteLines = [
-    ...(day.quickNotes || [])
-      .filter((note) => noteText(note.text))
-      .map((note) => `[quickNote] ${quickNoteTagLabel(note.tag)}${note.text.trim()}`),
+    ...getNotesForDay(day)
+      .map((note) => `[quickNote] ${quickNoteTagLabel(note.tag)}${noteText(note.content || note.text)}`),
     noteText(day.freeNotes),
     noteText(day.notes),
     ...(day.sectionNotes || [])

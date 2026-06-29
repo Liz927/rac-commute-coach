@@ -1,6 +1,17 @@
+import { mergeQuickNotes } from './day'
+
 function timestamp(value) {
   const parsed = Date.parse(value || '')
   return Number.isFinite(parsed) ? parsed : 0
+}
+
+function mergeDays(localDay, remoteDay) {
+  const localIsNewer = timestamp(localDay.updatedAt) >= timestamp(remoteDay.updatedAt)
+  const baseDay = localIsNewer ? localDay : remoteDay
+  return {
+    ...baseDay,
+    quickNotes: mergeQuickNotes(localDay.quickNotes || [], remoteDay.quickNotes || []),
+  }
 }
 
 function mergeById(localItems = [], remoteItems = [], chooseItem) {
@@ -46,9 +57,8 @@ export function toFirestoreSafe(value) {
 export function mergeSyncPayloads(localPayload = {}, remotePayload = {}) {
   const deletedDays = mergeDeletedDays(localPayload.deletedDays, remotePayload.deletedDays)
   const deletedDayIds = new Set(deletedDays.map((item) => item.id))
-  const days = mergeById(localPayload.days, remotePayload.days, (localDay, remoteDay) =>
-    timestamp(localDay.updatedAt) >= timestamp(remoteDay.updatedAt) ? localDay : remoteDay,
-  ).filter((day) => !deletedDayIds.has(day.id))
+  const days = mergeById(localPayload.days, remotePayload.days, mergeDays)
+    .filter((day) => !deletedDayIds.has(day.id))
   const quizQuestions = mergeById(
     localPayload.quizQuestions,
     remotePayload.quizQuestions,
