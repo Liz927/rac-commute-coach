@@ -166,9 +166,13 @@ describe('buildQuestionPackage', () => {
       'special controls / cutoff / LoQ',
       'general',
       '2026-06-25T00:00:00.000Z',
+      {
+        sourceSectionTitle: 'S6｜AP 和 bioanalysis workflow 的关系',
+      },
     )
 
     expect(buildQuestionPackage(day)).toContain('special controls / cutoff / LoQ')
+    expect(buildQuestionPackage(day)).toContain('[S6｜AP 和 bioanalysis workflow 的关系]')
   })
 
   it('filters quick notes to the current Day and pack when generating a package', () => {

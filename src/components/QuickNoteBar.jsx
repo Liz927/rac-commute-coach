@@ -21,7 +21,7 @@ function tagLabel(tag = 'general') {
   return TAGS.find((item) => item.value === tag)?.label || '备注'
 }
 
-export default function QuickNoteBar({ day, onUpdate }) {
+export default function QuickNoteBar({ day, onUpdate, getReadingContext }) {
   const [expanded, setExpanded] = useState(Boolean(day.quickDraft))
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingId, setEditingId] = useState('')
@@ -29,6 +29,7 @@ export default function QuickNoteBar({ day, onUpdate }) {
   const [draft, setDraft] = useState(day.quickDraft || '')
   const dayRef = useRef(day)
   const onUpdateRef = useRef(onUpdate)
+  const getReadingContextRef = useRef(getReadingContext)
   const draftRef = useRef(day.quickDraft || '')
   const textareaRef = useRef(null)
   const draftDayIdRef = useRef(day.id)
@@ -49,6 +50,7 @@ export default function QuickNoteBar({ day, onUpdate }) {
   useEffect(() => {
     dayRef.current = day
     onUpdateRef.current = onUpdate
+    getReadingContextRef.current = getReadingContext
     const savedDraft = day.quickDraft || ''
     const shouldSync = shouldSyncDraftFromDay({
       currentDayId: draftDayIdRef.current,
@@ -63,7 +65,7 @@ export default function QuickNoteBar({ day, onUpdate }) {
       draftRef.current = savedDraft
       setDraft(savedDraft)
     }
-  }, [day, onUpdate])
+  }, [day, onUpdate, getReadingContext])
 
   useEffect(() => () => writerRef.current?.cancel(), [])
 
@@ -120,7 +122,9 @@ export default function QuickNoteBar({ day, onUpdate }) {
     if (!submittedText.trim()) return
     writerRef.current.cancel()
     const currentDay = dayRef.current
-    const nextDay = appendQuickNoteToDay(currentDay, submittedText)
+    const context =
+      typeof getReadingContextRef.current === 'function' ? getReadingContextRef.current() : {}
+    const nextDay = appendQuickNoteToDay(currentDay, submittedText, 'general', new Date().toISOString(), context)
     dayRef.current = nextDay
     onUpdateRef.current(nextDay)
     setLocalDraft('')
@@ -172,7 +176,14 @@ export default function QuickNoteBar({ day, onUpdate }) {
                         onChange={(event) => updateNote(note, { text: event.target.value })}
                       />
                     ) : (
-                      <p>{note.text}</p>
+                      <>
+                        {(note.sourceSectionTitle || note.sourceSection) && (
+                          <small className="quick-note-source">
+                            {note.sourceSectionTitle || note.sourceSection}
+                          </small>
+                        )}
+                        <p>{note.text}</p>
+                      </>
                     )}
                     <div className="quick-note-drawer-actions">
                       <button type="button" onClick={() => setEditingId(isEditing ? '' : note.id)}>

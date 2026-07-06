@@ -1223,6 +1223,51 @@ summary:focus-visible {
   box-shadow: 0 6px 16px rgba(57, 48, 34, 0.08);
 }
 
+.reader-memory-actions {
+  display: flex;
+  width: min(100% - 36px, 760px);
+  margin: 10px auto 0;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.reader-memory-actions button,
+.reader-bookmark-jump {
+  display: inline-flex;
+  min-height: 42px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 253, 247, 0.94);
+  color: var(--green);
+  font-size: 0.88rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.reader-memory-actions button:nth-child(2) {
+  max-width: min(76vw, 420px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reader-bookmark-toast {
+  width: min(100% - 36px, 760px);
+  margin: 8px auto 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(175, 198, 182, 0.75);
+  border-radius: 14px;
+  background: var(--green-soft);
+  color: var(--green);
+  font-weight: 800;
+}
+
 .reader-content-shell {
   display: block;
   width: min(100%, 760px);
@@ -1342,6 +1387,42 @@ summary:focus-visible {
   font-size: 0.92rem;
   line-height: 1.35;
   text-overflow: ellipsis;
+}
+
+.reader-toc button.is-active {
+  border-color: rgba(23, 95, 83, 0.42);
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.reader-toc button.is-active span {
+  background: var(--green);
+  color: white;
+}
+
+.reader-bookmark-jump {
+  width: 100%;
+  min-height: 46px;
+  justify-content: flex-start;
+  border-radius: 14px;
+}
+
+.reader-bookmark-jump strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quick-note-source {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--gold-soft);
+  color: var(--gold);
+  font-size: 0.76rem;
+  font-weight: 800;
 }
 
 .reader-toc p {

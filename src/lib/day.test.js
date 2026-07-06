@@ -107,6 +107,11 @@ describe('day helpers', () => {
       '  special controls  ',
       'general',
       '2026-06-25T00:00:00.000Z',
+      {
+        sourceSectionId: 'day-5-s2',
+        sourceSectionTitle: 'S2｜Special controls',
+        scrollTop: 720,
+      },
     )
 
     expect(nextDay.quickDraft).toBe('')
@@ -116,6 +121,9 @@ describe('day helpers', () => {
         content: 'special controls',
         dayId: 'day-5',
         packId: 'rac-device-day-005',
+        sourceSectionId: 'day-5-s2',
+        sourceSectionTitle: 'S2｜Special controls',
+        scrollTop: 720,
         tag: 'general',
         syncStatus: 'pending',
         createdAt: '2026-06-25T00:00:00.000Z',

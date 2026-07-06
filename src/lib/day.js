@@ -103,6 +103,9 @@ export function createQuickNote(
     dayId: context.dayId || '',
     packId: context.packId || '',
     sourceSection: context.sourceSection || '',
+    sourceSectionId: context.sourceSectionId || '',
+    sourceSectionTitle: context.sourceSectionTitle || context.sourceSection || '',
+    scrollTop: Number.isFinite(Number(context.scrollTop)) ? Number(context.scrollTop) : undefined,
     tag: ['question', 'unsure', 'important', 'general'].includes(tag) ? tag : 'general',
     syncStatus: context.syncStatus || 'pending',
     createdAt: now,
@@ -115,10 +118,12 @@ export function appendQuickNoteToDay(
   text,
   tag = 'general',
   now = new Date().toISOString(),
+  context = {},
 ) {
   const note = createQuickNote(text, tag, now, {
     dayId: day.id || '',
     packId: day.packId || '',
+    ...context,
   })
   return {
     ...day,
@@ -171,6 +176,9 @@ export function upsertQuickNote(quickNotes = [], nextNote) {
           dayId: nextNote.dayId ?? note.dayId,
           packId: nextNote.packId ?? note.packId,
           sourceSection: nextNote.sourceSection ?? note.sourceSection,
+          sourceSectionId: nextNote.sourceSectionId ?? note.sourceSectionId,
+          sourceSectionTitle: nextNote.sourceSectionTitle ?? note.sourceSectionTitle,
+          scrollTop: nextNote.scrollTop ?? note.scrollTop,
           syncStatus: nextNote.syncStatus ?? note.syncStatus ?? 'pending',
           updatedAt: now,
         }

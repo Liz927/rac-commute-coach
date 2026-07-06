@@ -49,6 +49,11 @@ function quickNoteTagLabel(tag) {
   return ''
 }
 
+function quickNoteSourceLabel(note) {
+  const source = note.sourceSectionTitle || note.sourceSection || ''
+  return source ? `[${source}] ` : ''
+}
+
 export function buildQuestionPackage(day) {
   const flaggedQuestionMarks = (day.questions || [])
     .filter((question) => question.wantsToAsk)
@@ -109,7 +114,9 @@ export function buildQuestionPackage(day) {
   const wrongQuestionIds = new Set(wrongQuestions.map((question) => question.id))
   const freeNoteLines = [
     ...getNotesForDay(day)
-      .map((note) => `[quickNote] ${quickNoteTagLabel(note.tag)}${noteText(note.content || note.text)}`),
+      .map((note) =>
+        `[quickNote] ${quickNoteTagLabel(note.tag)}${quickNoteSourceLabel(note)}${noteText(note.content || note.text)}`,
+      ),
     noteText(day.freeNotes),
     noteText(day.notes),
     ...(day.sectionNotes || [])

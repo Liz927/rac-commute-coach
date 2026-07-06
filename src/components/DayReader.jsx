@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, ArrowUp, Check, Clipboard, Edit3, ListTree, Search } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ArrowUp, BookmarkPlus, Check, Clipboard, Edit3, ListTree, Search } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -6,6 +6,16 @@ import { buildQuestionPackage } from '../lib/package'
 import { getNotesForDay, upsertQuickNote, upsertSectionNote } from '../lib/day'
 import { getDayQuizAction, getLinkedDayQuestions } from '../lib/dayQuestions'
 import { parseMarkdown } from '../lib/markdown'
+import {
+  buildReadingToc,
+  calculateProgressPercent,
+  createReadingBookmark,
+  getActiveTocItem,
+  loadReadingBookmark,
+  loadReadingPosition,
+  saveReadingBookmark,
+  saveReadingPosition,
+} from '../lib/readingProgress'
 import { scrollContainerToTop } from '../lib/scroll'
 import InlineNote from './InlineNote'
 import MarkButtons from './MarkButtons'
@@ -88,8 +98,19 @@ function SectionContent({ section, day, onUpdate }) {
   )
 }
 
-function ReaderLookup({ sections, query, isOpen, onToggle, onQueryChange, onJump }) {
+function ReaderLookup({
+  sections,
+  tocItems,
+  activeSectionId,
+  bookmark,
+  query,
+  isOpen,
+  onToggle,
+  onQueryChange,
+  onJump,
+}) {
   const normalizedQuery = query.trim().toLowerCase()
+  const tocBySectionId = new Map(tocItems.map((item) => [item.id, item]))
   const matches = normalizedQuery
     ? sections.filter((section) =>
       `${section.label}\n${section.title}\n${section.content}`.toLowerCase().includes(normalizedQuery),
@@ -112,14 +133,33 @@ function ReaderLookup({ sections, query, isOpen, onToggle, onQueryChange, onJump
             placeholder="搜本 Day：predicate / S2 / controls"
           />
         </label>
+        {bookmark?.headingId && (
+          <button
+            className="reader-bookmark-jump"
+            type="button"
+            onClick={() => onJump(bookmark.headingId)}
+          >
+            <BookmarkPlus size={16} />
+            <span>我的书签</span>
+            <strong>{bookmark.headingText || '上次书签位置'}</strong>
+          </button>
+        )}
         <nav className="reader-toc" aria-label="当前 Day 目录">
           {matches.length ? (
-            matches.map((section) => (
-              <button key={section.id} type="button" onClick={() => onJump(section.id)}>
-                <span>{section.label}</span>
-                <strong>{section.title}</strong>
-              </button>
-            ))
+            matches.map((section) => {
+              const tocItem = tocBySectionId.get(section.id)
+              return (
+                <button
+                  key={section.id}
+                  className={tocItem?.id === activeSectionId ? 'is-active' : ''}
+                  type="button"
+                  onClick={() => onJump(section.id)}
+                >
+                  <span>{section.label}</span>
+                  <strong>{section.title}</strong>
+                </button>
+              )
+            })
           ) : (
             <p>没有匹配的段落。</p>
           )}
@@ -185,6 +225,13 @@ export default function DayReader({ day, allQuizQuestions = [], onBack, onEdit, 
   const [showPackage, setShowPackage] = useState(false)
   const [copied, setCopied] = useState(false)
   const readerScrollRef = useRef(null)
+  const saveTimerRef = useRef(null)
+  const restoredKeyRef = useRef('')
+  const activeSectionRef = useRef(null)
+  const [activeSectionId, setActiveSectionId] = useState('')
+  const [savedPosition, setSavedPosition] = useState(null)
+  const [bookmark, setBookmark] = useState(null)
+  const [bookmarkMessage, setBookmarkMessage] = useState('')
   const parsed = useMemo(() => parseMarkdown(day.contentMarkdown, day.id), [day])
   const questions = useMemo(
     () => getLinkedDayQuestions(day, allQuizQuestions),
@@ -201,8 +248,17 @@ export default function DayReader({ day, allQuizQuestions = [], onBack, onEdit, 
     }),
     [day, questions],
   )
-  const sections = (day.contentMarkdown ? parsed.sections : day.sections || []).filter(
-    (section) => !/^Q\d+$/i.test(section.label),
+  const sections = useMemo(
+    () =>
+      (day.contentMarkdown ? parsed.sections : day.sections || []).filter(
+        (section) => !/^Q\d+$/i.test(section.label),
+      ),
+    [day.contentMarkdown, day.sections, parsed.sections],
+  )
+  const tocItems = useMemo(() => buildReadingToc(day, sections), [day, sections])
+  const activeTocItem = useMemo(
+    () => tocItems.find((item) => item.id === activeSectionId) || tocItems[0] || null,
+    [activeSectionId, tocItems],
   )
   const generatedPackageText = useMemo(() => buildQuestionPackage(packageDay), [packageDay])
   const [packageDraft, setPackageDraft] = useState(() => day.reviewDraft || generatedPackageText)
@@ -227,6 +283,63 @@ export default function DayReader({ day, allQuizQuestions = [], onBack, onEdit, 
   useEffect(() => {
     setPackageDraft(day.reviewDraft || generatedPackageText)
   }, [day.id, day.reviewDraft])
+
+  useEffect(() => {
+    const nextPosition = loadReadingPosition(day)
+    setSavedPosition(nextPosition)
+    setBookmark(loadReadingBookmark(day))
+    setActiveSectionId('')
+    activeSectionRef.current = null
+    restoredKeyRef.current = ''
+  }, [day.id, day.packId])
+
+  useEffect(() => {
+    if (activeTab !== 'reading' || !savedPosition || !tocItems.length) return undefined
+    const restoreKey = `${day.id}:${day.packId || ''}:${savedPosition.updatedAt || ''}`
+    if (restoredKeyRef.current === restoreKey) return undefined
+    restoredKeyRef.current = restoreKey
+    restoreReadingPosition(savedPosition, 'auto')
+    return undefined
+  }, [activeTab, day.id, day.packId, savedPosition, tocItems.length])
+
+  useEffect(() => {
+    if (activeTab !== 'reading') return undefined
+    const container = readerScrollRef.current
+    if (!container) return undefined
+
+    function updateFromScroll() {
+      const current = getCurrentTocItem()
+      activeSectionRef.current = current
+      setActiveSectionId(current?.id || '')
+      if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = window.setTimeout(() => {
+        saveCurrentReadingPosition()
+      }, 500)
+    }
+
+    container.addEventListener('scroll', updateFromScroll, { passive: true })
+    updateFromScroll()
+    return () => {
+      container.removeEventListener('scroll', updateFromScroll)
+      if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current)
+      saveCurrentReadingPosition()
+    }
+  }, [activeTab, day.id, day.packId, tocItems])
+
+  useEffect(() => {
+    function saveBeforeLeave(event) {
+      if (event.type === 'pagehide' || document.visibilityState === 'hidden') {
+        saveCurrentReadingPosition()
+      }
+    }
+
+    document.addEventListener('visibilitychange', saveBeforeLeave)
+    window.addEventListener('pagehide', saveBeforeLeave)
+    return () => {
+      document.removeEventListener('visibilitychange', saveBeforeLeave)
+      window.removeEventListener('pagehide', saveBeforeLeave)
+    }
+  }, [activeTab, day.id, day.packId, tocItems])
 
   useEffect(() => {
     if (activeTab !== 'questions') return undefined
@@ -292,19 +405,111 @@ export default function DayReader({ day, allQuizQuestions = [], onBack, onEdit, 
     .map((line) => line.trim())
     .filter(Boolean).length
 
+  function getHeadingOffsets() {
+    const container = readerScrollRef.current
+    if (!container) return {}
+    const containerTop = container.getBoundingClientRect().top
+    return tocItems.reduce((offsets, item) => {
+      const target = document.getElementById(item.id)
+      if (!target) return offsets
+      offsets[item.id] = target.getBoundingClientRect().top - containerTop + container.scrollTop
+      return offsets
+    }, {})
+  }
+
+  function getCurrentTocItem() {
+    const container = readerScrollRef.current
+    if (!container) return activeTocItem
+    return getActiveTocItem(tocItems, container.scrollTop, getHeadingOffsets()) || activeTocItem
+  }
+
+  function scrollToSection(sectionId, behavior = 'smooth') {
+    const container = readerScrollRef.current
+    const target = document.getElementById(sectionId)
+    if (!container || !target) return
+    const containerTop = container.getBoundingClientRect().top
+    const top = target.getBoundingClientRect().top - containerTop + container.scrollTop - 8
+    container.scrollTo({ top: Math.max(0, top), behavior })
+  }
+
+  function saveCurrentReadingPosition() {
+    if (activeTab !== 'reading') return null
+    const container = readerScrollRef.current
+    if (!container) return null
+    const current = getCurrentTocItem()
+    const payload = saveReadingPosition(day, {
+      scrollTop: container.scrollTop,
+      currentHeadingId: current?.id || '',
+      currentHeadingText: current?.text || '',
+      progressPercent: calculateProgressPercent(
+        container.scrollTop,
+        container.scrollHeight,
+        container.clientHeight,
+      ),
+    })
+    if (payload) {
+      restoredKeyRef.current = `${day.id}:${day.packId || ''}:${payload.updatedAt || ''}`
+      setSavedPosition(payload)
+    }
+    return payload
+  }
+
+  function restoreReadingPosition(position = savedPosition, behavior = 'auto') {
+    if (!position) return
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        if (position.currentHeadingId && document.getElementById(position.currentHeadingId)) {
+          scrollToSection(position.currentHeadingId, behavior)
+          setActiveSectionId(position.currentHeadingId)
+          return
+        }
+        const container = readerScrollRef.current
+        if (container) {
+          container.scrollTo({ top: Math.max(0, position.scrollTop || 0), behavior })
+        }
+      })
+    })
+  }
+
   function jumpToSection(sectionId) {
     setActiveTab('reading')
+    setLookupOpen(false)
     window.setTimeout(() => {
-      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      scrollToSection(sectionId)
+      setActiveSectionId(sectionId)
+      saveCurrentReadingPosition()
     }, 80)
   }
 
   function scrollToTop() {
     scrollContainerToTop(readerScrollRef.current, window, 'smooth')
+    if (tocItems[0]) setActiveSectionId(tocItems[0].id)
+  }
+
+  function setBookmarkHere() {
+    const container = readerScrollRef.current
+    const current = getCurrentTocItem()
+    if (!container || !current) return
+    const nextBookmark = createReadingBookmark(day, current, container.scrollTop)
+    saveReadingBookmark(day, nextBookmark)
+    setBookmark(nextBookmark)
+    setBookmarkMessage(`已保存书签：${nextBookmark.headingText || '当前位置'}`)
+    window.setTimeout(() => setBookmarkMessage(''), 1800)
+  }
+
+  function getReadingContext() {
+    const current = activeSectionRef.current || getCurrentTocItem()
+    return {
+      sourceSectionId: current?.id || '',
+      sourceSectionTitle: current?.text || current?.title || '',
+      sourceSection: current?.text || current?.title || '',
+      scrollTop: readerScrollRef.current?.scrollTop || 0,
+    }
   }
 
   function startDayQuiz() {
     if (!quizAction.enabled) return
+    saveCurrentReadingPosition()
     setActiveTab('questions')
   }
 
@@ -352,16 +557,53 @@ export default function DayReader({ day, allQuizQuestions = [], onBack, onEdit, 
           type="button"
           role="tab"
           aria-selected={activeTab === 'questions'}
-          onClick={() => setActiveTab('questions')}
+          onClick={() => {
+            saveCurrentReadingPosition()
+            setActiveTab('questions')
+          }}
         >
           默想题 {questions.length ? `(${questions.length})` : ''}
         </button>
       </div>
 
+      {activeTab === 'reading' && (
+        <div className="reader-memory-actions" aria-label="阅读位置操作">
+          <button type="button" onClick={() => setLookupOpen((current) => !current)}>
+            <ListTree size={17} /> 目录
+          </button>
+          {savedPosition && (
+            <button type="button" onClick={() => restoreReadingPosition(savedPosition, 'smooth')}>
+              继续上次阅读
+              {savedPosition.currentHeadingText ? `：${savedPosition.currentHeadingText}` : ''}
+            </button>
+          )}
+          <button type="button" onClick={scrollToTop}>
+            <ArrowUp size={17} /> 从顶部开始
+          </button>
+          {bookmark?.headingId && (
+            <button type="button" onClick={() => scrollToSection(bookmark.headingId)}>
+              我的书签：{bookmark.headingText || '上次书签位置'}
+            </button>
+          )}
+          <button type="button" onClick={setBookmarkHere}>
+            <BookmarkPlus size={17} /> 设为书签
+          </button>
+        </div>
+      )}
+
+      {bookmarkMessage && (
+        <div className="reader-bookmark-toast" role="status">
+          {bookmarkMessage}
+        </div>
+      )}
+
       <div className="reader-content-shell">
         {activeTab === 'reading' && sections.length ? (
           <ReaderLookup
             sections={sections}
+            tocItems={tocItems}
+            activeSectionId={activeSectionId}
+            bookmark={bookmark}
             query={lookupQuery}
             isOpen={lookupOpen}
             onToggle={() => setLookupOpen((current) => !current)}
@@ -528,7 +770,7 @@ De Novo 和 PMA 的边界想再问
           )}
         </article>
       </div>
-      <QuickNoteBar day={day} onUpdate={updateReaderDay} />
+      <QuickNoteBar day={day} onUpdate={updateReaderDay} getReadingContext={getReadingContext} />
     </main>
   )
 }
