@@ -51,6 +51,7 @@ export default function PackageImportScreen({
   const [rawText, setRawText] = useState('')
   const [preview, setPreview] = useState(null)
   const [error, setError] = useState('')
+  const [errorDetails, setErrorDetails] = useState('')
   const [result, setResult] = useState(null)
   const importedQuestionIds = useMemo(
     () => new Set(loadImportedQuestions().map((question) => question.id)),
@@ -81,6 +82,7 @@ export default function PackageImportScreen({
 
   function parsePreview() {
     setError('')
+    setErrorDetails('')
     setResult(null)
     try {
       const parsed = parseLearningPackage(rawText)
@@ -88,6 +90,7 @@ export default function PackageImportScreen({
     } catch (parseError) {
       setPreview(null)
       setError(parseError.message)
+      setErrorDetails(parseError.debugPreview || '')
     }
   }
 
@@ -109,6 +112,7 @@ export default function PackageImportScreen({
     setRawText('')
     setPreview(null)
     setError('')
+    setErrorDetails('')
     setResult(null)
   }
 
@@ -139,6 +143,7 @@ export default function PackageImportScreen({
               setPreview(null)
               setResult(null)
               setError('')
+              setErrorDetails('')
             }}
             placeholder={starterText}
           />
@@ -155,7 +160,17 @@ export default function PackageImportScreen({
             <Eraser size={18} /> 清空
           </button>
         </div>
-        {error && <p className="status-message error" role="alert">解析失败：{error}</p>}
+        {error && (
+          <div className="status-message error package-error" role="alert">
+            <p>解析失败：{error}</p>
+            {errorDetails && (
+              <details>
+                <summary>查看解析片段</summary>
+                <pre>{errorDetails}</pre>
+              </details>
+            )}
+          </div>
+        )}
       </section>
 
       {preview && (

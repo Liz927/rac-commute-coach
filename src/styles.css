@@ -2765,6 +2765,34 @@ summary:focus-visible {
   line-height: 1.5;
 }
 
+.package-error {
+  display: grid;
+  gap: 10px;
+  text-align: left;
+}
+
+.package-error p {
+  margin: 0;
+}
+
+.package-error summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.package-error pre {
+  max-height: 280px;
+  overflow: auto;
+  margin: 8px 0 0;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255, 253, 247, 0.72);
+  color: var(--ink);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
 @media (min-width: 760px) {
   body {
     background:

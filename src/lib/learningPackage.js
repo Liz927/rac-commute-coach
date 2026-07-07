@@ -6,6 +6,7 @@ const V1_MARKERS = {
   questions: 'QUESTIONS_JSON',
   end: 'END',
 }
+
 const V2_MARKERS = {
   start: 'RAC_DAY_PACKAGE_V2_START',
   metaStart: 'META_START',
@@ -16,7 +17,9 @@ const V2_MARKERS = {
   questionsEnd: 'QUESTIONS_JSON_END',
   end: 'RAC_DAY_PACKAGE_V2_END',
 }
+
 const VALID_DIFFICULTIES = ['easy', 'medium', 'hard']
+const VALID_ANSWERS = ['A', 'B', 'C', 'D']
 
 function markerRegex(name) {
   return new RegExp(`^\\s*-+\\s*${name}\\s*-+\\s*$`, 'gmi')
@@ -26,7 +29,7 @@ function v2MarkerRegex(name) {
   return new RegExp(`^\\s*${name}\\s*$`, 'gmi')
 }
 
-function isCodeFence(line) {
+function isCodeFence(line = '') {
   return /^\s*```[^\n]*$/.test(line)
 }
 
@@ -68,18 +71,48 @@ function slugify(value) {
   return slug || `package-${Date.now()}`
 }
 
-function parseMeta(metaText) {
+function parseKeyValueMeta(metaText) {
   return metaText
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean)
     .reduce((meta, line) => {
+      if (line.startsWith('{') || line.startsWith('}')) return meta
       const separatorIndex = line.indexOf(':')
       if (separatorIndex < 0) return meta
       const key = line.slice(0, separatorIndex).trim()
       const value = line.slice(separatorIndex + 1).trim()
       return { ...meta, [key]: value }
     }, {})
+}
+
+function extractDayNumber(value) {
+  const match = String(value || '').match(/(\d+(?:\.\d+)?)/)
+  return match ? Number(match[1]) : undefined
+}
+
+function parseMetaJsonObject(metaText) {
+  const start = metaText.indexOf('{')
+  const end = metaText.lastIndexOf('}')
+  if (start < 0 || end <= start) return {}
+
+  const jsonText = sanitizeJsonLikeText(metaText.slice(start, end + 1), { extract: 'object' }).text
+  try {
+    const parsed = JSON.parse(jsonText)
+    if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') return {}
+    return parsed
+  } catch {
+    return {}
+  }
+}
+
+function parseMeta(metaText) {
+  const keyValueMeta = parseKeyValueMeta(metaText)
+  const jsonMeta = parseMetaJsonObject(metaText)
+  return {
+    ...jsonMeta,
+    ...keyValueMeta,
+  }
 }
 
 function findMarker(rawText, name, fromIndex = 0) {
@@ -131,36 +164,163 @@ function normalizeType(type, correctOptionIds) {
   return correctOptionIds.length > 1 ? 'multiple' : 'single'
 }
 
-export function normalizeJsonText(raw = '') {
-  return String(raw)
-    .replace(/[\u201C\u201D\u201E\u201F\uFF02]/g, '"')
-    .replace(/\uFEFF/g, '')
-    .trim()
+function hasSmartJsonQuotes(raw = '') {
+  return /[\u201C\u201D\u201E\u201F\uFF02\u2018\u2019]/.test(raw)
 }
 
-function hasSmartJsonQuotes(raw = '') {
-  return /[\u201C\u201D\u201E\u201F\uFF02]/.test(raw)
+function stripMarkdownFence(raw = '') {
+  const lines = String(raw || '').replace(/\r\n?/g, '\n').replace(/\uFEFF/g, '').trim().split('\n')
+  if (isCodeFence(lines[0])) lines.shift()
+  if (isCodeFence(lines.at(-1))) lines.pop()
+  return lines.join('\n').trim()
+}
+
+function extractJsonContainer(raw, extract = 'array') {
+  const text = stripMarkdownFence(raw)
+  const startChar = extract === 'object' ? '{' : '['
+  const endChar = extract === 'object' ? '}' : ']'
+  const start = text.indexOf(startChar)
+  const end = text.lastIndexOf(endChar)
+  if (start >= 0 && end > start) return text.slice(start, end + 1).trim()
+  return text.trim()
+}
+
+function nextNonWhitespace(text, index) {
+  for (let cursor = index + 1; cursor < text.length; cursor += 1) {
+    if (!/\s/.test(text[cursor])) return text[cursor]
+  }
+  return ''
+}
+
+function isQuoteLike(char) {
+  return /["\u201C\u201D\u201E\u201F\uFF02\u2018\u2019]/.test(char)
+}
+
+function normalizeStructuralQuotes(raw) {
+  let output = ''
+  let inString = false
+  let escaped = false
+
+  for (let index = 0; index < raw.length; index += 1) {
+    const char = raw[index]
+
+    if (!inString) {
+      if (isQuoteLike(char)) {
+        output += '"'
+        inString = true
+      } else {
+        output += char
+      }
+      continue
+    }
+
+    if (escaped) {
+      output += char
+      escaped = false
+      continue
+    }
+
+    if (char === '\\') {
+      output += char
+      escaped = true
+      continue
+    }
+
+    if (isQuoteLike(char)) {
+      const next = nextNonWhitespace(raw, index)
+      if (!next || [':', ',', '}', ']'].includes(next)) {
+        output += '"'
+        inString = false
+      } else {
+        output += char
+      }
+      continue
+    }
+
+    output += char
+  }
+
+  return output
+}
+
+function sanitizeJsonLikeText(raw = '', { extract = 'array' } = {}) {
+  const withoutFence = extractJsonContainer(raw, extract)
+  return {
+    text: normalizeStructuralQuotes(withoutFence).trim(),
+    hadSmartQuotes: hasSmartJsonQuotes(withoutFence),
+    previewRaw: String(raw || '').slice(0, 500),
+  }
+}
+
+export function normalizeJsonText(raw = '') {
+  return sanitizeJsonLikeText(raw).text
+}
+
+export function sanitizeQuestionsJsonText(raw = '') {
+  return sanitizeJsonLikeText(raw, { extract: 'array' })
+}
+
+function getLineColumn(text, position) {
+  const before = text.slice(0, Math.max(0, position))
+  const lines = before.split('\n')
+  return {
+    line: lines.length,
+    column: lines.at(-1).length + 1,
+  }
 }
 
 function formatJsonParseError(error, jsonText) {
-  const positionMatch = String(error?.message || '').match(/position\s+(\d+)/i)
+  const message = String(error?.message || '')
+  const positionMatch = message.match(/position\s+(\d+)/i)
+  const lineColumnMatch = message.match(/line\s+(\d+)\s+column\s+(\d+)/i)
   const position = positionMatch ? Number(positionMatch[1]) : 0
+  const location = lineColumnMatch
+    ? { line: Number(lineColumnMatch[1]), column: Number(lineColumnMatch[2]) }
+    : getLineColumn(jsonText, position)
   const previewStart = Math.max(0, position - 24)
   const preview = jsonText
     .slice(previewStart, Math.min(jsonText.length, position + 25))
     .replace(/\n/g, '\\n')
-  return `QUESTIONS_JSON 不是合法 JSON：${error.message}。附近片段：${preview}`
+  return `QUESTIONS_JSON 不是合法 JSON：${message}。错误位置：第 ${location.line} 行，第 ${location.column} 个字符。附近片段：${preview}`
+}
+
+function parseQuestionsJson(questionsRaw) {
+  const sanitized = sanitizeQuestionsJsonText(questionsRaw)
+  try {
+    return {
+      parsedQuestions: JSON.parse(sanitized.text),
+      questionsJsonNormalized: sanitized.hadSmartQuotes || sanitized.text !== String(questionsRaw || '').trim(),
+      normalizedQuestionsRaw: sanitized.text,
+    }
+  } catch (error) {
+    throw new Error(formatJsonParseError(error, sanitized.text))
+  }
+}
+
+function questionError(questionId, type, message) {
+  return new Error(`${type}：题目 ${questionId} ${message}`)
 }
 
 function normalizeOptions(question, questionId) {
-  if (!Array.isArray(question.options) || question.options.length < 2) {
-    throw new Error(`题目 ${questionId} 至少需要两个选项`)
+  const rawOptions =
+    !Array.isArray(question.options) && question.options && typeof question.options === 'object'
+      ? Object.entries(question.options).map(([key, text]) => ({ key, text }))
+      : question.options
+
+  if (!Array.isArray(rawOptions) || rawOptions.length < 2) {
+    throw questionError(questionId, 'options 格式错误', '至少需要两个选项')
   }
 
-  return question.options.map((option) => {
+  return rawOptions.map((option, index) => {
+    if (!option || typeof option !== 'object') {
+      throw questionError(questionId, 'options 格式错误', `第 ${index + 1} 个选项不是对象`)
+    }
     const id = String(option.id || option.key || '').trim().toUpperCase()
     if (!id) {
-      throw new Error(`题目 ${questionId} 有选项缺少 key/id`)
+      throw questionError(questionId, '缺少字段', `第 ${index + 1} 个选项缺少 key/id`)
+    }
+    if (!String(option.text || '').trim()) {
+      throw questionError(questionId, '缺少字段', `选项 ${id} 缺少 text`)
     }
     return {
       id,
@@ -178,20 +338,39 @@ function normalizeAnswers(question, options, questionId) {
     .filter(Boolean)
 
   if (!normalized.length) {
-    throw new Error(`题目 ${questionId} 缺少答案`)
+    throw questionError(questionId, '缺少字段', '缺少 answer')
   }
 
   normalized.forEach((answer) => {
+    if (!VALID_ANSWERS.includes(answer)) {
+      throw questionError(questionId, 'answer 非法', `answer ${answer} 不属于 A/B/C/D`)
+    }
     if (!optionIds.has(answer)) {
-      throw new Error(`题目 ${questionId} 的答案 ${answer} 不在选项中`)
+      throw questionError(questionId, 'answer 非法', `answer ${answer} 不在 options 中`)
     }
   })
 
   return normalized
 }
 
+function validateQuestionShape(question, questionId) {
+  if (!question || typeof question !== 'object' || Array.isArray(question)) {
+    throw questionError(questionId, '题目格式错误', '必须是对象')
+  }
+  if (question.type && !['single_choice', 'single', 'multiple_choice', 'multiple'].includes(question.type)) {
+    throw questionError(questionId, 'type 非法', `type ${question.type} 不支持`)
+  }
+  if (!String(question.prompt || question.stem || '').trim()) {
+    throw questionError(questionId, '缺少字段', '缺少 stem')
+  }
+  if (!String(question.explanation || '').trim()) {
+    throw questionError(questionId, '缺少字段', '缺少 explanation')
+  }
+}
+
 function normalizeQuizQuestion(question, index, meta) {
-  const id = String(question.id || `${meta.packId}-q${String(index + 1).padStart(3, '0')}`).trim()
+  const id = String(question?.id || `${meta.packId}-q${String(index + 1).padStart(3, '0')}`).trim()
+  validateQuestionShape(question, id)
   const options = normalizeOptions(question, id)
   const correctOptionIds = normalizeAnswers(question, options, id)
   const questionTags = normalizeTags(question.tags)
@@ -211,59 +390,85 @@ function normalizeQuizQuestion(question, index, meta) {
   }
 }
 
-function parsePackageBlocks({ version, metaRaw, contentMarkdown, questionsRaw }) {
-  const rawMeta = parseMeta(metaRaw)
-  const title = rawMeta.title?.trim()
-
+function buildMeta(rawMeta) {
+  const title = String(rawMeta.title || '').trim()
   if (!title) {
-    throw new Error('学习包缺少 title')
+    throw new Error('学习包缺少 title，请检查 META_START 到 META_END 内容')
   }
 
-  const day = rawMeta.day ? Number(rawMeta.day) : undefined
-  const packId = rawMeta.packId?.trim() || `rac-day-${day || slugify(title)}`
-  const meta = {
+  const day = extractDayNumber(rawMeta.day ?? rawMeta.dayNumber ?? rawMeta.dayId)
+  const packId = String(rawMeta.packId || '').trim() || `rac-day-${day || slugify(title)}`
+
+  return {
     day: Number.isFinite(day) ? day : undefined,
     title,
     packId,
-    domain: rawMeta.domain?.trim() || undefined,
+    domain: String(rawMeta.domain || '').trim() || undefined,
     tags: normalizeTags(rawMeta.tags),
-    difficulty: normalizeDifficulty(rawMeta.difficulty?.trim()),
+    difficulty: normalizeDifficulty(String(rawMeta.difficulty || '').trim()),
   }
+}
 
-  const questionsJsonNormalized = version === 'RAC_DAY_PACKAGE_V2' && hasSmartJsonQuotes(questionsRaw)
-  const normalizedQuestionsRaw = version === 'RAC_DAY_PACKAGE_V2'
-    ? normalizeJsonText(questionsRaw)
-    : questionsRaw
+function buildDebugPreview(metaRaw, contentMarkdown, questionsRaw, normalizedQuestionsRaw = '') {
+  return [
+    '查看解析片段：',
+    `META 原文：\n${String(metaRaw || '').slice(0, 500)}`,
+    `CONTENT 前 200 字符：\n${String(contentMarkdown || '').slice(0, 200)}`,
+    `QUESTIONS_JSON 原文前 500 字符：\n${String(questionsRaw || '').slice(0, 500)}`,
+    normalizedQuestionsRaw
+      ? `QUESTIONS_JSON 清洗后前 500 字符：\n${String(normalizedQuestionsRaw).slice(0, 500)}`
+      : '',
+  ].filter(Boolean).join('\n\n')
+}
+
+function parsePackageBlocks({ version, metaRaw, contentMarkdown, questionsRaw }) {
+  const rawMeta = parseMeta(metaRaw)
+  const meta = buildMeta(rawMeta)
+
   let parsedQuestions
+  let questionsJsonNormalized = false
+  let normalizedQuestionsRaw = ''
   try {
-    parsedQuestions = JSON.parse(normalizedQuestionsRaw)
+    const parsed = parseQuestionsJson(questionsRaw)
+    parsedQuestions = parsed.parsedQuestions
+    questionsJsonNormalized = parsed.questionsJsonNormalized
+    normalizedQuestionsRaw = parsed.normalizedQuestionsRaw
   } catch (error) {
-    throw new Error(formatJsonParseError(error, normalizedQuestionsRaw))
+    error.debugPreview = buildDebugPreview(metaRaw, contentMarkdown, questionsRaw)
+    throw error
   }
 
   if (!Array.isArray(parsedQuestions)) {
-    throw new Error('QUESTIONS_JSON 必须是数组')
+    const error = new Error('QUESTIONS_JSON schema 错误：questions 必须是 Array')
+    error.debugPreview = buildDebugPreview(metaRaw, contentMarkdown, questionsRaw, normalizedQuestionsRaw)
+    throw error
   }
 
-  const questions = parsedQuestions.map((question, index) =>
-    normalizeQuizQuestion(question, index, meta),
-  )
+  let questions
+  try {
+    questions = parsedQuestions.map((question, index) =>
+      normalizeQuizQuestion(question, index, meta),
+    )
+  } catch (error) {
+    error.debugPreview = buildDebugPreview(metaRaw, contentMarkdown, questionsRaw, normalizedQuestionsRaw)
+    throw error
+  }
+
   const ids = new Set()
   questions.forEach((question) => {
     if (ids.has(question.id)) {
-      throw new Error(`同一学习包内 question.id 重复：${question.id}`)
+      const error = new Error(`同一学习包内 question.id 重复：${question.id}`)
+      error.debugPreview = buildDebugPreview(metaRaw, contentMarkdown, questionsRaw, normalizedQuestionsRaw)
+      throw error
     }
     ids.add(question.id)
-    if (!question.prompt) {
-      throw new Error(`题目 ${question.id} 缺少 stem/prompt`)
-    }
   })
 
   return {
     version,
     meta,
     contentMarkdown,
-    sanitizedContentMarkdown: parseMarkdown(contentMarkdown, packId).contentWithoutQuestions,
+    sanitizedContentMarkdown: parseMarkdown(contentMarkdown, meta.packId).contentWithoutQuestions,
     questions,
     questionsJsonNormalized,
   }
@@ -322,14 +527,25 @@ function parseV2Package(normalized, detectedMarkers) {
   const contentEnd = requireV2Marker(normalized, detectedMarkers, 'contentEnd', contentStart.index + contentStart.length)
   const questionsStart = requireV2Marker(normalized, detectedMarkers, 'questionsStart', contentEnd.index + contentEnd.length)
   const questionsEnd = requireV2Marker(normalized, detectedMarkers, 'questionsEnd', questionsStart.index + questionsStart.length)
-  const end = requireV2Marker(normalized, detectedMarkers, 'end', questionsEnd.index + questionsEnd.length)
+  requireV2Marker(normalized, detectedMarkers, 'end', questionsEnd.index + questionsEnd.length)
 
-  return parsePackageBlocks({
-    version: 'RAC_DAY_PACKAGE_V2',
-    metaRaw: normalized.slice(metaStart.index + metaStart.length, metaEnd.index).trim(),
-    contentMarkdown: normalized.slice(contentStart.index + contentStart.length, contentEnd.index).trim(),
-    questionsRaw: normalized.slice(questionsStart.index + questionsStart.length, questionsEnd.index).trim(),
-  })
+  try {
+    return parsePackageBlocks({
+      version: 'RAC_DAY_PACKAGE_V2',
+      metaRaw: normalized.slice(metaStart.index + metaStart.length, metaEnd.index).trim(),
+      contentMarkdown: normalized.slice(contentStart.index + contentStart.length, contentEnd.index).trim(),
+      questionsRaw: normalized.slice(questionsStart.index + questionsStart.length, questionsEnd.index).trim(),
+    })
+  } catch (error) {
+    if (!error.debugPreview) {
+      error.debugPreview = buildDebugPreview(
+        normalized.slice(metaStart.index + metaStart.length, metaEnd.index).trim(),
+        normalized.slice(contentStart.index + contentStart.length, contentEnd.index).trim(),
+        normalized.slice(questionsStart.index + questionsStart.length, questionsEnd.index).trim(),
+      )
+    }
+    throw error
+  }
 }
 
 export function parseLearningPackage(rawText = '') {
