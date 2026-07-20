@@ -3,7 +3,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { buildQuestionPackage } from '../lib/package'
-import { getNotesForDay, upsertQuickNote, upsertSectionNote } from '../lib/day'
+import {
+  applyQuestionStatePatch,
+  getNotesForDay,
+  upsertQuickNote,
+  upsertSectionNote,
+} from '../lib/day'
 import { getDayQuizAction, getLinkedDayQuestions } from '../lib/dayQuestions'
 import { parseMarkdown } from '../lib/markdown'
 import {
@@ -174,17 +179,17 @@ function QuickNotesList({ day, onUpdate }) {
   if (!notes.length) return <p className="quick-notes-empty">还没有随手记录的问题。</p>
 
   function updateNote(note, patch) {
-    onUpdate({
-      ...day,
-      quickNotes: upsertQuickNote(day.quickNotes || [], { ...note, ...patch }),
-    })
+    onUpdate((currentDay) => ({
+      ...currentDay,
+      quickNotes: upsertQuickNote(currentDay.quickNotes || [], { ...note, ...patch }),
+    }))
   }
 
   function deleteNote(id) {
-    onUpdate({
-      ...day,
-      quickNotes: (day.quickNotes || []).filter((note) => note.id !== id),
-    })
+    onUpdate((currentDay) => ({
+      ...currentDay,
+      quickNotes: (currentDay.quickNotes || []).filter((note) => note.id !== id),
+    }))
   }
 
   return (
@@ -388,16 +393,7 @@ export default function DayReader({ day, allQuizQuestions = [], onBack, onEdit, 
   }
 
   function updateLinkedQuestionState(questionId, patch) {
-    onUpdate({
-      ...day,
-      questionStates: {
-        ...(day.questionStates || {}),
-        [questionId]: {
-          ...(day.questionStates || {})[questionId],
-          ...patch,
-        },
-      },
-    })
+    onUpdate((currentDay) => applyQuestionStatePatch(currentDay, questionId, patch))
   }
 
   const freeNoteCount = (day.freeNotes || '')

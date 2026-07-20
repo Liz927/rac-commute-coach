@@ -29,6 +29,7 @@ export default function QuizScreen() {
           emptyTitle="No wrong questions right now"
           emptyMessage="Missed questions will appear here automatically after you submit an answer."
           isStarred={quiz.isStarred}
+          latestAttemptsByQuestionId={quiz.latestAttemptsByQuestionId}
           onToggleStar={quiz.toggleStar}
           onAnswer={quiz.answerQuestion}
         />
@@ -67,6 +68,7 @@ export default function QuizScreen() {
         emptyTitle="No questions match these filters"
         emptyMessage="Relax one filter to continue practicing."
         isStarred={quiz.isStarred}
+        latestAttemptsByQuestionId={quiz.latestAttemptsByQuestionId}
         onToggleStar={quiz.toggleStar}
         onAnswer={quiz.answerQuestion}
       />

@@ -1,6 +1,6 @@
 import { RotateCcw } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import type { Question } from '../types'
+import type { Question, QuizAttempt } from '../types'
 import QuestionPanel from './QuestionPanel'
 
 type PracticeViewProps = {
@@ -10,6 +10,7 @@ type PracticeViewProps = {
   emptyTitle: string
   emptyMessage: string
   isStarred: (questionId: string) => boolean
+  latestAttemptsByQuestionId: Map<string, QuizAttempt>
   onToggleStar: (questionId: string) => void
   onAnswer: (question: Question, selectedOptionIds: string[]) => {
     isCorrect: boolean
@@ -25,6 +26,7 @@ export default function PracticeView({
   emptyTitle,
   emptyMessage,
   isStarred,
+  latestAttemptsByQuestionId,
   onToggleStar,
   onAnswer,
 }: PracticeViewProps) {
@@ -72,6 +74,7 @@ export default function PracticeView({
         question={activeQuestion}
         positionLabel={positionLabel}
         isStarred={isStarred(activeQuestion.id)}
+        latestAttempt={latestAttemptsByQuestionId.get(activeQuestion.id)}
         onToggleStar={onToggleStar}
         onSubmit={onAnswer}
         onNext={nextQuestion}

@@ -7,6 +7,7 @@ import {
   evaluateAnswer,
   filterQuestions,
   getAvailableFilters,
+  getLatestAttempts,
   getWrongQuestionIds,
   validateQuestionPack,
 } from '../lib/quiz'
@@ -66,6 +67,10 @@ export function useQuizStore() {
     () => new Set(getWrongQuestionIds(progress.attempts)),
     [progress.attempts],
   )
+  const latestAttemptsByQuestionId = useMemo(
+    () => getLatestAttempts(progress.attempts),
+    [progress.attempts],
+  )
   const starredQuestionIds = useMemo(
     () => new Set(progress.starredQuestionIds),
     [progress.starredQuestionIds],
@@ -114,6 +119,7 @@ export function useQuizStore() {
     setFilters,
     validationErrors,
     progress,
+    latestAttemptsByQuestionId,
     stats,
     wrongQuestions: questions.filter((question) => wrongQuestionIds.has(question.id)),
     favoriteQuestions: questions.filter((question) => starredQuestionIds.has(question.id)),

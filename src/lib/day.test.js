@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   appendQuickNoteToDay,
+  applyQuestionStatePatch,
   createEmptyDay,
   getNotesForDay,
   getQuickNoteCount,
@@ -91,6 +92,23 @@ describe('day helpers', () => {
     expect(selectQuestionAnswerPatch('C')).toEqual({
       userAnswer: 'C',
       showAnswer: true,
+    })
+  })
+
+  it('patches one question state without dropping other answers or flags', () => {
+    const day = {
+      id: 'day-15',
+      questionStates: {
+        D15_Q1: { userAnswer: 'A', showAnswer: true, isUnsure: true },
+        D15_Q2: { userAnswer: 'C', showAnswer: true },
+      },
+    }
+
+    const next = applyQuestionStatePatch(day, 'D15_Q1', { userAnswer: 'B' })
+
+    expect(next.questionStates).toEqual({
+      D15_Q1: { userAnswer: 'B', showAnswer: true, isUnsure: true },
+      D15_Q2: { userAnswer: 'C', showAnswer: true },
     })
   })
 

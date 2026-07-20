@@ -135,6 +135,19 @@ export function appendQuickNoteToDay(
   }
 }
 
+export function applyQuestionStatePatch(day, questionId, patch) {
+  return {
+    ...day,
+    questionStates: {
+      ...(day.questionStates || {}),
+      [questionId]: {
+        ...(day.questionStates || {})[questionId],
+        ...patch,
+      },
+    },
+  }
+}
+
 function noteText(note) {
   return String(note?.content ?? note?.text ?? '').trim()
 }

@@ -1,6 +1,6 @@
 import { CheckCircle2, Circle, Square, Star } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import type { Question } from '../types'
+import type { Question, QuizAttempt } from '../types'
 import { formatCorrectAnswer, shouldAutoSubmitAnswer } from '../lib/quiz'
 
 type AnswerResult = {
@@ -13,6 +13,7 @@ type QuestionPanelProps = {
   question: Question
   positionLabel: string
   isStarred: boolean
+  latestAttempt?: QuizAttempt
   onToggleStar: (questionId: string) => void
   onSubmit: (question: Question, selectedOptionIds: string[]) => AnswerResult
   onNext?: () => void
@@ -23,6 +24,7 @@ export default function QuestionPanel({
   question,
   positionLabel,
   isStarred,
+  latestAttempt,
   onToggleStar,
   onSubmit,
   onNext,
@@ -32,9 +34,19 @@ export default function QuestionPanel({
   const [result, setResult] = useState<AnswerResult | null>(null)
 
   useEffect(() => {
-    setSelectedOptionIds([])
-    setResult(null)
-  }, [question.id])
+    if (!latestAttempt) {
+      setSelectedOptionIds([])
+      setResult(null)
+      return
+    }
+
+    setSelectedOptionIds(latestAttempt.selectedOptionIds)
+    setResult({
+      isCorrect: latestAttempt.isCorrect,
+      selectedOptionIds: latestAttempt.selectedOptionIds,
+      correctOptionIds: question.correctOptionIds,
+    })
+  }, [latestAttempt, question.correctOptionIds, question.id])
 
   const selectedIds = useMemo(() => new Set(selectedOptionIds), [selectedOptionIds])
   const correctIds = useMemo(() => new Set(result?.correctOptionIds || []), [result])

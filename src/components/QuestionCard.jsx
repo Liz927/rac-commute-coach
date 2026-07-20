@@ -28,23 +28,23 @@ export default function QuestionCard({ day, question, onUpdate, onStateChange })
       onStateChange(question.id, patch)
       return
     }
-    onUpdate({
-      ...day,
-      questions: day.questions.map((item) =>
+    onUpdate((currentDay) => ({
+      ...currentDay,
+      questions: currentDay.questions.map((item) =>
         item.id === question.id ? { ...item, ...patch } : item,
       ),
-    })
+    }))
   }
 
   function saveQuestionNote(note) {
-    onUpdate({
-      ...day,
-      questionNotes: upsertQuestionNote(day.questionNotes || [], {
+    onUpdate((currentDay) => ({
+      ...currentDay,
+      questionNotes: upsertQuestionNote(currentDay.questionNotes || [], {
         questionId: question.id,
         questionLabel: label,
         note,
       }),
-    })
+    }))
   }
 
   return (
@@ -112,7 +112,7 @@ export default function QuestionCard({ day, question, onUpdate, onStateChange })
         targetId={question.id}
         targetLabel={`D${day.dayNumber}-${label}`}
         excerpt={stem}
-        onChange={(marks) => onUpdate({ ...day, marks })}
+        onChange={(marks) => onUpdate((currentDay) => ({ ...currentDay, marks }))}
       />
       <InlineNote
         buttonLabel="备注/想问一句"

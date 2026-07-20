@@ -43,7 +43,7 @@ export default function QuickNoteBar({ day, onUpdate, getReadingContext }) {
     writerRef.current = createDeferredDraftWriter((value) => {
       const currentDay = dayRef.current
       if ((currentDay.quickDraft || '') === value) return
-      onUpdateRef.current({ ...currentDay, quickDraft: value })
+      onUpdateRef.current((latestDay) => ({ ...latestDay, quickDraft: value }))
     })
   }
 
@@ -67,7 +67,21 @@ export default function QuickNoteBar({ day, onUpdate, getReadingContext }) {
     }
   }, [day, onUpdate, getReadingContext])
 
-  useEffect(() => () => writerRef.current?.cancel(), [])
+  useEffect(() => {
+    function flushDraftBeforeLeave(event) {
+      if (event.type === 'pagehide' || document.visibilityState === 'hidden') {
+        writerRef.current?.flush(draftRef.current)
+      }
+    }
+
+    document.addEventListener('visibilitychange', flushDraftBeforeLeave)
+    window.addEventListener('pagehide', flushDraftBeforeLeave)
+    return () => {
+      document.removeEventListener('visibilitychange', flushDraftBeforeLeave)
+      window.removeEventListener('pagehide', flushDraftBeforeLeave)
+      writerRef.current?.flush(draftRef.current)
+    }
+  }, [])
 
   function setLocalDraft(value) {
     draftRef.current = value
@@ -104,29 +118,36 @@ export default function QuickNoteBar({ day, onUpdate, getReadingContext }) {
   }
 
   function updateNote(note, patch) {
-    onUpdate({
-      ...day,
-      quickNotes: upsertQuickNote(day.quickNotes || [], { ...note, ...patch }),
-    })
+    onUpdate((currentDay) => ({
+      ...currentDay,
+      quickNotes: upsertQuickNote(currentDay.quickNotes || [], { ...note, ...patch }),
+    }))
   }
 
   function deleteNote(id) {
-    onUpdate({
-      ...day,
-      quickNotes: (day.quickNotes || []).filter((note) => note.id !== id),
-    })
+    onUpdate((currentDay) => ({
+      ...currentDay,
+      quickNotes: (currentDay.quickNotes || []).filter((note) => note.id !== id),
+    }))
   }
 
   function addNote() {
     const submittedText = textareaRef.current?.value ?? draftRef.current
     if (!submittedText.trim()) return
     writerRef.current.cancel()
-    const currentDay = dayRef.current
     const context =
       typeof getReadingContextRef.current === 'function' ? getReadingContextRef.current() : {}
-    const nextDay = appendQuickNoteToDay(currentDay, submittedText, 'general', new Date().toISOString(), context)
-    dayRef.current = nextDay
-    onUpdateRef.current(nextDay)
+    onUpdateRef.current((currentDay) => {
+      const nextDay = appendQuickNoteToDay(
+        currentDay,
+        submittedText,
+        'general',
+        new Date().toISOString(),
+        context,
+      )
+      dayRef.current = nextDay
+      return nextDay
+    })
     setLocalDraft('')
     setExpanded(false)
     setDrawerOpen(true)

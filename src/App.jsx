@@ -83,7 +83,12 @@ export default function App() {
         allQuizQuestions={allQuizQuestions}
         onBack={() => setView({ name: 'days', dayId: null })}
         onEdit={() => setView({ name: 'editor', dayId: selectedDay.id })}
-        onUpdate={(nextDay) => updateDay(nextDay.id, () => nextDay)}
+        onUpdate={(nextDayOrUpdater) =>
+          updateDay(selectedDay.id, (currentDay) =>
+            typeof nextDayOrUpdater === 'function'
+              ? nextDayOrUpdater(currentDay)
+              : nextDayOrUpdater,
+          )}
       />
     )
   }
