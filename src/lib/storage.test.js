@@ -163,6 +163,43 @@ describe('normalizeImport', () => {
     expect(result.quizProgress).toEqual({ attempts: [], starredQuestionIds: ['q1'] })
   })
 
+  it('exports and imports Day reading bookmarks', () => {
+    const payload = makeExportPayload([
+      {
+        id: 'day-9',
+        dayNumber: 9,
+        title: 'Bookmark test',
+        packId: 'rac-device-day-009',
+        contentMarkdown: '# Bookmark test',
+        bookmarks: [
+          {
+            id: 'bookmark-s6',
+            dayId: 'day-9',
+            packId: 'rac-device-day-009',
+            headingId: 'day-9-s6',
+            headingText: 'S6 | Evidence',
+            sectionId: 'day-9-s6',
+            sectionTitle: 'Evidence',
+            sectionLabel: 'S6',
+            scrollTop: 1200,
+            createdAt: '2026-07-21T00:00:00.000Z',
+            updatedAt: '2026-07-21T00:00:00.000Z',
+          },
+        ],
+      },
+    ])
+
+    expect(payload.days[0].bookmarks).toEqual([
+      expect.objectContaining({
+        id: 'bookmark-s6',
+        sectionId: 'day-9-s6',
+        sectionTitle: 'Evidence',
+        scrollTop: 1200,
+      }),
+    ])
+    expect(normalizeImport(payload).days[0].bookmarks).toEqual(payload.days[0].bookmarks)
+  })
+
   it('migrates legacy markdown question blocks into structured questions on import', () => {
     const result = normalizeImport({
       version: 1,

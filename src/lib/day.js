@@ -84,6 +84,7 @@ export function createEmptyDay(dayNumber = 1, now = new Date().toISOString()) {
     questionNotes: [],
     questionStates: {},
     quickNotes: [],
+    bookmarks: [],
     createdAt: now,
     updatedAt: now,
   }

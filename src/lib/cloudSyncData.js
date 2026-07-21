@@ -11,6 +11,14 @@ function mergeDays(localDay, remoteDay) {
   return {
     ...baseDay,
     quickNotes: mergeQuickNotes(localDay.quickNotes || [], remoteDay.quickNotes || []),
+    bookmarks: mergeById(
+      localDay.bookmarks || [],
+      remoteDay.bookmarks || [],
+      (localBookmark, remoteBookmark) =>
+        timestamp(localBookmark.updatedAt) >= timestamp(remoteBookmark.updatedAt)
+          ? localBookmark
+          : remoteBookmark,
+    ),
   }
 }
 

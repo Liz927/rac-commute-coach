@@ -14,6 +14,7 @@ import { parseMarkdown } from '../lib/markdown'
 import {
   buildReadingToc,
   calculateProgressPercent,
+  clearReadingBookmark,
   createReadingBookmark,
   getActiveTocItem,
   loadReadingBookmark,
@@ -42,19 +43,19 @@ function getSectionTone(label = '') {
   return 'is-general'
 }
 
-function SectionContent({ section, day, onUpdate }) {
+function SectionContent({ section, day, onUpdate, isBookmarked, onToggleBookmark }) {
   const sectionNote =
     (day.sectionNotes || []).find((note) => note.sectionId === section.id)?.note || ''
 
   function saveSectionNote(note) {
-    onUpdate({
-      ...day,
-      sectionNotes: upsertSectionNote(day.sectionNotes || [], {
+    onUpdate((currentDay) => ({
+      ...currentDay,
+      sectionNotes: upsertSectionNote(currentDay.sectionNotes || [], {
         sectionId: section.id,
         sectionTitle: section.title,
         note,
       }),
-    })
+    }))
   }
 
   const body = (
@@ -66,7 +67,7 @@ function SectionContent({ section, day, onUpdate }) {
         targetId={section.id}
         targetLabel={`D${day.dayNumber}-${section.label}`}
         excerpt={section.title}
-        onChange={(marks) => onUpdate({ ...day, marks })}
+        onChange={(marks) => onUpdate((currentDay) => ({ ...currentDay, marks }))}
       />
       <InlineNote
         buttonLabel="记一句"
@@ -83,6 +84,20 @@ function SectionContent({ section, day, onUpdate }) {
         <summary>
           <span>{section.label}</span>
           {section.title}
+          <button
+            className={`section-bookmark-button ${isBookmarked ? 'is-active' : ''}`}
+            type="button"
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              onToggleBookmark(section)
+            }}
+            aria-pressed={isBookmarked}
+            aria-label={`Bookmark ${section.label} ${section.title}`}
+          >
+            <BookmarkPlus size={16} />
+            <span>{isBookmarked ? '已书签' : '书签'}</span>
+          </button>
         </summary>
         <div className="markdown-body">{body}</div>
       </details>
@@ -97,6 +112,16 @@ function SectionContent({ section, day, onUpdate }) {
       <div className="reading-heading">
         <span>{section.label}</span>
         <h2>{section.title}</h2>
+        <button
+          className={`section-bookmark-button ${isBookmarked ? 'is-active' : ''}`}
+          type="button"
+          onClick={() => onToggleBookmark(section)}
+          aria-pressed={isBookmarked}
+          aria-label={`Bookmark ${section.label} ${section.title}`}
+        >
+          <BookmarkPlus size={16} />
+          <span>{isBookmarked ? '已书签' : '书签'}</span>
+        </button>
       </div>
       <div className="markdown-body">{body}</div>
     </section>
@@ -261,6 +286,10 @@ export default function DayReader({ day, allQuizQuestions = [], onBack, onEdit, 
     [day.contentMarkdown, day.sections, parsed.sections],
   )
   const tocItems = useMemo(() => buildReadingToc(day, sections), [day, sections])
+  const sectionBookmarkIds = useMemo(
+    () => new Set((day.bookmarks || []).map((item) => item.sectionId || item.headingId)),
+    [day.bookmarks],
+  )
   const activeTocItem = useMemo(
     () => tocItems.find((item) => item.id === activeSectionId) || tocItems[0] || null,
     [activeSectionId, tocItems],
@@ -292,7 +321,8 @@ export default function DayReader({ day, allQuizQuestions = [], onBack, onEdit, 
   useEffect(() => {
     const nextPosition = loadReadingPosition(day)
     setSavedPosition(nextPosition)
-    setBookmark(loadReadingBookmark(day))
+    const dayBookmarks = day.bookmarks || []
+    setBookmark(dayBookmarks[dayBookmarks.length - 1] || loadReadingBookmark(day))
     setActiveSectionId('')
     activeSectionRef.current = null
     restoredKeyRef.current = ''
@@ -487,10 +517,73 @@ export default function DayReader({ day, allQuizQuestions = [], onBack, onEdit, 
     const current = getCurrentTocItem()
     if (!container || !current) return
     const nextBookmark = createReadingBookmark(day, current, container.scrollTop)
+    nextBookmark.id = `${day.id || day.packId || 'day'}-${current.id}-bookmark`
     saveReadingBookmark(day, nextBookmark)
+    onUpdate((currentDay) => ({
+      ...currentDay,
+      bookmarks: [
+        ...(currentDay.bookmarks || []).filter(
+          (item) => (item.sectionId || item.headingId) !== current.id,
+        ),
+        {
+          ...nextBookmark,
+          sectionId: current.id,
+          sectionTitle: current.title || current.text || '',
+        },
+      ],
+    }))
     setBookmark(nextBookmark)
     setBookmarkMessage(`已保存书签：${nextBookmark.headingText || '当前位置'}`)
     window.setTimeout(() => setBookmarkMessage(''), 1800)
+  }
+
+  function toggleSectionBookmark(section) {
+    const tocItem = tocItems.find((item) => item.id === section.id) || {
+      id: section.id,
+      label: section.label,
+      title: section.title,
+      text: `${section.label}｜${section.title}`,
+    }
+    const container = readerScrollRef.current
+    const target = document.getElementById(section.id)
+    const containerTop = container?.getBoundingClientRect().top || 0
+    const scrollTop = target && container
+      ? target.getBoundingClientRect().top - containerTop + container.scrollTop
+      : container?.scrollTop || 0
+    const existing = (day.bookmarks || []).some(
+      (item) => (item.sectionId || item.headingId) === section.id,
+    )
+    const createdBookmark = existing
+      ? null
+      : {
+          ...createReadingBookmark(day, tocItem, scrollTop),
+          id: `${day.id || day.packId || 'day'}-${section.id}-bookmark`,
+          sectionId: section.id,
+          sectionTitle: section.title,
+          sectionLabel: section.label,
+        }
+    const remainingBookmarks = existing
+      ? (day.bookmarks || []).filter((item) => (item.sectionId || item.headingId) !== section.id)
+      : []
+    onUpdate((currentDay) => ({
+      ...currentDay,
+      bookmarks: existing
+        ? (currentDay.bookmarks || []).filter(
+            (item) => (item.sectionId || item.headingId) !== section.id,
+          )
+        : [...(currentDay.bookmarks || []), createdBookmark],
+    }))
+    if (!existing) {
+      saveReadingBookmark(day, createdBookmark)
+      setBookmark(createdBookmark)
+      setBookmarkMessage(`已保存书签：${createdBookmark.headingText || section.title}`)
+      window.setTimeout(() => setBookmarkMessage(''), 1800)
+    } else {
+      const nextActiveBookmark = remainingBookmarks[remainingBookmarks.length - 1] || null
+      if (nextActiveBookmark) saveReadingBookmark(day, nextActiveBookmark)
+      else clearReadingBookmark(day)
+      setBookmark(nextActiveBookmark)
+    }
   }
 
   function getReadingContext() {
@@ -618,6 +711,8 @@ export default function DayReader({ day, allQuizQuestions = [], onBack, onEdit, 
                   section={section}
                   day={day}
                   onUpdate={updateEffectiveDay}
+                  isBookmarked={sectionBookmarkIds.has(section.id)}
+                  onToggleBookmark={toggleSectionBookmark}
                 />
               ))
             ) : (

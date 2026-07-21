@@ -1485,7 +1485,7 @@ summary:focus-visible {
 
 .reading-heading {
   display: grid;
-  grid-template-columns: 48px 1fr;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
   align-items: baseline;
   gap: 4px;
   margin-bottom: 14px;
@@ -1511,6 +1511,33 @@ summary:focus-visible {
   font-family: "Iowan Old Style", "Songti SC", serif;
   font-size: clamp(1.45rem, 6vw, 2rem);
   line-height: 1.25;
+}
+
+.section-bookmark-button {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.section-bookmark-button.is-active {
+  border-color: rgba(155, 106, 36, 0.45);
+  background: var(--gold-soft);
+  color: var(--gold);
+}
+
+.term-section summary .section-bookmark-button {
+  margin-left: auto;
 }
 
 .markdown-body {
@@ -1687,7 +1714,7 @@ summary:focus-visible {
   cursor: pointer;
 }
 
-.term-section summary span {
+.term-section summary > span {
   display: grid;
   width: 34px;
   height: 34px;
@@ -2413,10 +2440,14 @@ summary:focus-visible {
 .reading-finish-actions {
   display: grid;
   gap: 10px;
-  margin: 28px 0 4px;
+  margin: 28px 0 calc(92px + env(safe-area-inset-bottom));
   padding: 20px 0 4px;
   border-top: 1px solid #e5dfd3;
   text-align: center;
+}
+
+.quiz-finish-actions {
+  margin-bottom: calc(118px + env(safe-area-inset-bottom));
 }
 
 .reading-finish-actions > p {

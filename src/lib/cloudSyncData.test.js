@@ -171,6 +171,41 @@ describe('mergeSyncPayloads', () => {
     })
   })
 
+  it('merges Day bookmarks instead of dropping them with an older remote snapshot', () => {
+    const merged = mergeSyncPayloads(
+      {
+        days: [
+          {
+            id: 'day-9',
+            updatedAt: '2026-07-21T10:00:00.000Z',
+            bookmarks: [
+              {
+                id: 'bookmark-s6',
+                sectionId: 'day-9-s6',
+                headingId: 'day-9-s6',
+                headingText: 'S6 | Evidence',
+                updatedAt: '2026-07-21T10:00:00.000Z',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        days: [
+          {
+            id: 'day-9',
+            updatedAt: '2026-07-21T11:00:00.000Z',
+            bookmarks: [],
+          },
+        ],
+      },
+    )
+
+    expect(merged.days[0].bookmarks).toEqual([
+      expect.objectContaining({ id: 'bookmark-s6', sectionId: 'day-9-s6' }),
+    ])
+  })
+
   it('removes undefined values before a payload is sent to Firestore', () => {
     expect(toFirestoreSafe({
       title: 'Day 1',

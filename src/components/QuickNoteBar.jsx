@@ -21,16 +21,50 @@ function tagLabel(tag = 'general') {
   return TAGS.find((item) => item.value === tag)?.label || '备注'
 }
 
+function getDraftKey(day) {
+  return `rac.quickDraft.v1:${day?.id || 'day'}:${day?.packId || 'no-pack'}`
+}
+
+function readStoredDraft(day) {
+  try {
+    return globalThis.localStorage?.getItem(getDraftKey(day)) ?? null
+  } catch {
+    return null
+  }
+}
+
+function writeStoredDraft(day, value) {
+  try {
+    globalThis.localStorage?.setItem(getDraftKey(day), value)
+  } catch {
+    // localStorage can be unavailable; keep the in-memory draft.
+  }
+}
+
+function clearStoredDraft(day) {
+  try {
+    globalThis.localStorage?.removeItem(getDraftKey(day))
+  } catch {
+    // no-op
+  }
+}
+
+function getInitialDraft(day) {
+  const stored = readStoredDraft(day)
+  return stored !== null ? stored : day.quickDraft || ''
+}
+
 export default function QuickNoteBar({ day, onUpdate, getReadingContext }) {
-  const [expanded, setExpanded] = useState(Boolean(day.quickDraft))
+  const initialDraft = getInitialDraft(day)
+  const [expanded, setExpanded] = useState(Boolean(initialDraft))
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingId, setEditingId] = useState('')
   const [message, setMessage] = useState('')
-  const [draft, setDraft] = useState(day.quickDraft || '')
+  const [draft, setDraft] = useState(initialDraft)
   const dayRef = useRef(day)
   const onUpdateRef = useRef(onUpdate)
   const getReadingContextRef = useRef(getReadingContext)
-  const draftRef = useRef(day.quickDraft || '')
+  const draftRef = useRef(initialDraft)
   const textareaRef = useRef(null)
   const draftDayIdRef = useRef(day.id)
   const isFocusedRef = useRef(false)
@@ -41,9 +75,19 @@ export default function QuickNoteBar({ day, onUpdate, getReadingContext }) {
 
   if (!writerRef.current) {
     writerRef.current = createDeferredDraftWriter((value) => {
-      const currentDay = dayRef.current
-      if ((currentDay.quickDraft || '') === value) return
-      onUpdateRef.current((latestDay) => ({ ...latestDay, quickDraft: value }))
+      writeStoredDraft(dayRef.current, value)
+    })
+  }
+
+  function persistDraftToDay(value) {
+    const currentDay = dayRef.current
+    writeStoredDraft(currentDay, value)
+    if ((currentDay.quickDraft || '') === value) return
+    onUpdateRef.current((latestDay) => {
+      if (latestDay.id !== currentDay.id) return latestDay
+      const nextDay = { ...latestDay, quickDraft: value }
+      dayRef.current = nextDay
+      return nextDay
     })
   }
 
@@ -51,7 +95,7 @@ export default function QuickNoteBar({ day, onUpdate, getReadingContext }) {
     dayRef.current = day
     onUpdateRef.current = onUpdate
     getReadingContextRef.current = getReadingContext
-    const savedDraft = day.quickDraft || ''
+    const savedDraft = getInitialDraft(day)
     const shouldSync = shouldSyncDraftFromDay({
       currentDayId: draftDayIdRef.current,
       nextDayId: day.id,
@@ -71,6 +115,7 @@ export default function QuickNoteBar({ day, onUpdate, getReadingContext }) {
     function flushDraftBeforeLeave(event) {
       if (event.type === 'pagehide' || document.visibilityState === 'hidden') {
         writerRef.current?.flush(draftRef.current)
+        persistDraftToDay(draftRef.current)
       }
     }
 
@@ -80,6 +125,7 @@ export default function QuickNoteBar({ day, onUpdate, getReadingContext }) {
       document.removeEventListener('visibilitychange', flushDraftBeforeLeave)
       window.removeEventListener('pagehide', flushDraftBeforeLeave)
       writerRef.current?.flush(draftRef.current)
+      persistDraftToDay(draftRef.current)
     }
   }, [])
 
@@ -91,8 +137,12 @@ export default function QuickNoteBar({ day, onUpdate, getReadingContext }) {
   function updateDraft(value, { flush = false } = {}) {
     setExpanded(true)
     setLocalDraft(value)
-    if (flush) writerRef.current.flush(value)
-    else writerRef.current.schedule(value)
+    if (flush) {
+      writerRef.current.flush(value)
+      persistDraftToDay(value)
+    } else {
+      writerRef.current.schedule(value)
+    }
   }
 
   function handleDraftChange(event) {
@@ -114,7 +164,10 @@ export default function QuickNoteBar({ day, onUpdate, getReadingContext }) {
 
   function handleBlur() {
     isFocusedRef.current = false
-    if (!isComposingRef.current) writerRef.current.flush(draftRef.current)
+    if (!isComposingRef.current) {
+      writerRef.current.flush(draftRef.current)
+      persistDraftToDay(draftRef.current)
+    }
   }
 
   function updateNote(note, patch) {
@@ -135,6 +188,7 @@ export default function QuickNoteBar({ day, onUpdate, getReadingContext }) {
     const submittedText = textareaRef.current?.value ?? draftRef.current
     if (!submittedText.trim()) return
     writerRef.current.cancel()
+    clearStoredDraft(dayRef.current)
     const context =
       typeof getReadingContextRef.current === 'function' ? getReadingContextRef.current() : {}
     onUpdateRef.current((currentDay) => {

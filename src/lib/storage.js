@@ -80,6 +80,24 @@ function normalizeQuickNote(note, index) {
   }
 }
 
+function normalizeBookmark(bookmark, index) {
+  const now = new Date().toISOString()
+  return {
+    id: bookmark.id || `imported-bookmark-${index + 1}`,
+    dayId: bookmark.dayId || '',
+    packId: bookmark.packId || '',
+    headingId: bookmark.headingId || bookmark.sectionId || '',
+    headingText: bookmark.headingText || bookmark.sectionTitle || '',
+    sectionId: bookmark.sectionId || bookmark.headingId || '',
+    sectionTitle: bookmark.sectionTitle || bookmark.headingText || '',
+    sectionLabel: bookmark.sectionLabel || '',
+    scrollTop: Math.max(0, Math.round(Number(bookmark.scrollTop) || 0)),
+    note: bookmark.note || '',
+    createdAt: bookmark.createdAt || now,
+    updatedAt: bookmark.updatedAt || bookmark.createdAt || now,
+  }
+}
+
 function normalizeQuestionStates(states) {
   if (!states || typeof states !== 'object' || Array.isArray(states)) return {}
   return Object.fromEntries(
@@ -135,6 +153,9 @@ function normalizeDay(day, index) {
     questionStates: normalizeQuestionStates(day.questionStates),
     quickNotes: Array.isArray(day.quickNotes)
       ? day.quickNotes.map(normalizeQuickNote).filter((note) => note.text.trim())
+      : [],
+    bookmarks: Array.isArray(day.bookmarks)
+      ? day.bookmarks.map(normalizeBookmark).filter((bookmark) => bookmark.headingId)
       : [],
     createdAt: day.createdAt || now,
     updatedAt: day.updatedAt || now,

@@ -109,6 +109,11 @@ export function saveReadingBookmark(day, bookmark, storage = getStorage()) {
   return bookmark
 }
 
+export function clearReadingBookmark(day, storage = getStorage()) {
+  if (!storage || !day?.id) return
+  storage.removeItem(getReadingBookmarkKey(day))
+}
+
 export function loadReadingBookmark(day, storage = getStorage()) {
   if (!storage || !day?.id) return null
   const value = parseJson(storage.getItem(getReadingBookmarkKey(day)))
