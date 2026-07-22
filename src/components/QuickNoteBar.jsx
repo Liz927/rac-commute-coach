@@ -1,6 +1,6 @@
 import { MessageCircleQuestion, Pencil, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { appendQuickNoteToDay, getNotesForDay, upsertQuickNote } from '../lib/day'
+import { createQuickNote, getNotesForDay, upsertQuickNote } from '../lib/day'
 import { createDeferredDraftWriter, shouldSyncDraftFromDay } from '../lib/deferredDraft'
 
 const TAGS = [
@@ -61,6 +61,7 @@ export default function QuickNoteBar({ day, onUpdate, getReadingContext }) {
   const [editingId, setEditingId] = useState('')
   const [message, setMessage] = useState('')
   const [draft, setDraft] = useState(initialDraft)
+  const [committedNotes, setCommittedNotes] = useState(() => getNotesForDay(day))
   const dayRef = useRef(day)
   const onUpdateRef = useRef(onUpdate)
   const getReadingContextRef = useRef(getReadingContext)
@@ -70,7 +71,7 @@ export default function QuickNoteBar({ day, onUpdate, getReadingContext }) {
   const isFocusedRef = useRef(false)
   const isComposingRef = useRef(false)
   const writerRef = useRef(null)
-  const quickNotes = getNotesForDay(day)
+  const quickNotes = committedNotes
   const canAdd = Boolean(draft.trim())
 
   if (!writerRef.current) {
@@ -95,6 +96,7 @@ export default function QuickNoteBar({ day, onUpdate, getReadingContext }) {
     dayRef.current = day
     onUpdateRef.current = onUpdate
     getReadingContextRef.current = getReadingContext
+    setCommittedNotes(getNotesForDay(day))
     const savedDraft = getInitialDraft(day)
     const shouldSync = shouldSyncDraftFromDay({
       currentDayId: draftDayIdRef.current,
@@ -159,7 +161,9 @@ export default function QuickNoteBar({ day, onUpdate, getReadingContext }) {
 
   function handleCompositionEnd(event) {
     isComposingRef.current = false
-    updateDraft(event.currentTarget.value, { flush: true })
+    const value = event.currentTarget.value
+    setLocalDraft(value)
+    writerRef.current.flush(value)
   }
 
   function handleBlur() {
@@ -171,6 +175,7 @@ export default function QuickNoteBar({ day, onUpdate, getReadingContext }) {
   }
 
   function updateNote(note, patch) {
+    setCommittedNotes((currentNotes) => upsertQuickNote(currentNotes, { ...note, ...patch }))
     onUpdate((currentDay) => ({
       ...currentDay,
       quickNotes: upsertQuickNote(currentDay.quickNotes || [], { ...note, ...patch }),
@@ -178,35 +183,57 @@ export default function QuickNoteBar({ day, onUpdate, getReadingContext }) {
   }
 
   function deleteNote(id) {
+    setCommittedNotes((currentNotes) => currentNotes.filter((note) => note.id !== id))
     onUpdate((currentDay) => ({
       ...currentDay,
       quickNotes: (currentDay.quickNotes || []).filter((note) => note.id !== id),
     }))
   }
 
-  function addNote() {
+  function commitDraft({ collapse = true } = {}) {
     const submittedText = textareaRef.current?.value ?? draftRef.current
-    if (!submittedText.trim()) return
+    if (!submittedText.trim()) {
+      if (collapse) setExpanded(false)
+      return false
+    }
     writerRef.current.cancel()
     clearStoredDraft(dayRef.current)
     const context =
       typeof getReadingContextRef.current === 'function' ? getReadingContextRef.current() : {}
+    const currentDay = dayRef.current
+    const note = createQuickNote(submittedText, 'general', new Date().toISOString(), {
+      dayId: currentDay.id || '',
+      packId: currentDay.packId || '',
+      ...context,
+    })
+    setCommittedNotes((currentNotes) => [...currentNotes, note])
     onUpdateRef.current((currentDay) => {
-      const nextDay = appendQuickNoteToDay(
-        currentDay,
-        submittedText,
-        'general',
-        new Date().toISOString(),
-        context,
-      )
+      const nextDay = {
+        ...currentDay,
+        quickDraft: '',
+        quickNotes: [...(currentDay.quickNotes || []), note],
+      }
       dayRef.current = nextDay
       return nextDay
     })
     setLocalDraft('')
-    setExpanded(false)
+    if (collapse) setExpanded(false)
     setDrawerOpen(true)
     setMessage('已加入问题包')
     window.setTimeout(() => setMessage(''), 1500)
+    return true
+  }
+
+  function addNote() {
+    commitDraft()
+  }
+
+  function collapseNoteBar() {
+    commitDraft()
+  }
+
+  function preventBlurBeforeAction(event) {
+    event.preventDefault()
   }
 
   return (
@@ -307,16 +334,35 @@ export default function QuickNoteBar({ day, onUpdate, getReadingContext }) {
           placeholder="随手记一个疑问…"
         />
         {expanded && (
-          <button className="quick-note-ghost" type="button" onClick={() => setExpanded(false)}>
+          <button
+            className="quick-note-ghost"
+            type="button"
+            onPointerDown={preventBlurBeforeAction}
+            onMouseDown={preventBlurBeforeAction}
+            onClick={collapseNoteBar}
+          >
             <X size={18} /> 收起
           </button>
         )}
-        <button className="quick-note-add" type="button" onClick={addNote} disabled={!canAdd}>
+        <button
+          className="quick-note-add"
+          type="button"
+          onPointerDown={preventBlurBeforeAction}
+          onMouseDown={preventBlurBeforeAction}
+          onClick={addNote}
+          disabled={!canAdd}
+        >
           {expanded ? '加入问题包' : '加入'}
         </button>
       </div>
       {expanded && draft && (
-        <button className="quick-note-clear" type="button" onClick={() => updateDraft('', { flush: true })}>
+        <button
+          className="quick-note-clear"
+          type="button"
+          onPointerDown={preventBlurBeforeAction}
+          onMouseDown={preventBlurBeforeAction}
+          onClick={() => updateDraft('', { flush: true })}
+        >
           清空
         </button>
       )}
