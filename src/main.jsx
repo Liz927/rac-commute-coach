@@ -9,6 +9,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </React.StrictMode>,
 )
 
+document.getElementById('boot-fallback')?.setAttribute('hidden', '')
+
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     const hadController = Boolean(navigator.serviceWorker.controller)
