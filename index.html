@@ -12,6 +12,37 @@
   </head>
   <body>
     <div id="root"></div>
+    <div id="boot-fallback" hidden style="max-width: 28rem; margin: 20vh auto 0; padding: 24px; font-family: system-ui, sans-serif; text-align: center; color: #173f3a;">
+      <h1 style="font-size: 1.25rem;">应用没有成功启动</h1>
+      <p style="line-height: 1.6;">可能是手机仍在使用旧版本缓存。下面的操作不会删除学习数据。</p>
+      <button id="boot-recover" type="button" style="min-height: 48px; padding: 0 20px; border: 0; border-radius: 14px; background: #173f3a; color: white; font-size: 16px;">清理应用缓存并重新加载</button>
+    </div>
+    <script>
+      (() => {
+        const fallback = document.getElementById('boot-fallback')
+        const root = document.getElementById('root')
+        const showFallback = () => {
+          if (!root.children.length) fallback.hidden = false
+        }
+
+        window.setTimeout(showFallback, 5000)
+        window.addEventListener('error', showFallback)
+        window.addEventListener('unhandledrejection', showFallback)
+        document.getElementById('boot-recover').addEventListener('click', async () => {
+          const registrations = await navigator.serviceWorker?.getRegistrations?.() || []
+          await Promise.all(registrations.map((registration) => registration.unregister()))
+          if ('caches' in window) {
+            const keys = await caches.keys()
+            await Promise.all(
+              keys
+                .filter((key) => key.startsWith('rac-commute-coach-'))
+                .map((key) => caches.delete(key)),
+            )
+          }
+          window.location.reload()
+        })
+      })()
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
